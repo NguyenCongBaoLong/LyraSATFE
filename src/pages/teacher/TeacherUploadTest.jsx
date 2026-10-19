@@ -53,7 +53,7 @@ export default function TeacherUploadTest() {
         formData.append('classCode', selectedClass);
         formData.append('duration', duration);
         formData.append('testType', testType);
-        if (deadline) formData.append('deadline', deadline);
+        if (deadline) formData.append('deadline', new Date(deadline).toISOString());
         
         // Nếu có nhập số lần làm bài thì gửi lên, nếu để trống thì không gửi (để backend nhận null = vô hạn)
         if (maxAttempts && parseInt(maxAttempts) > 0) {
