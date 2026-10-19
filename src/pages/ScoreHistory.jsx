@@ -155,7 +155,7 @@ export default function ScoreHistory() {
                             <div className="bg-white p-8 overflow-y-auto">
                                 <span className="text-[11px] font-bold text-pink-400 uppercase tracking-widest mb-3 block">Reading Passage</span>
                                 <p className="text-sm leading-relaxed text-slate-700 font-serif whitespace-pre-line">
-                                    {currentQ.passageText || "Không có đoạn văn bản đi kèm."}
+                                {currentQ.passageText || "Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải."}
                                 </p>
                             </div>
 
