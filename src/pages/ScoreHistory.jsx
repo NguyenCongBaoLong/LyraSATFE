@@ -1,24 +1,56 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import StudentSidebar from '../components/StudentSidebar';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 8;
 
 export default function ScoreHistory() {
     const [history, setHistory] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [page, setPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+    const [historyError, setHistoryError] = useState('');
     
     // State quản lý Modal xem lại bài làm (Review)
     const [reviewData, setReviewData] = useState(null);
     const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
     const [isLoadingReview, setIsLoadingReview] = useState(false);
 
-    const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem('user')) || {};
 
     useEffect(() => {
-        api.get(`/submissions/history/${user.id || 1}`)
-            .then(res => setHistory(res.data))
-            .catch(err => console.log(err));
-    }, [user.id]);
+        const timeout = setTimeout(() => setDebouncedSearchTerm(searchTerm.trim()), 300);
+        return () => clearTimeout(timeout);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        setIsLoadingHistory(true);
+        setHistoryError('');
+        const controller = new AbortController();
+        api.get(`/submissions/history/${user.id || 1}`, {
+            params: { page, pageSize: PAGE_SIZE, search: debouncedSearchTerm },
+            signal: controller.signal
+        })
+            .then(res => {
+                setHistory(res.data.items);
+                setTotalCount(res.data.totalCount);
+                setPage(res.data.page);
+            })
+            .catch(err => {
+                if (err.code === 'ERR_CANCELED') return;
+                console.error('Lỗi tải lịch sử làm bài:', err);
+                setHistoryError('Không thể tải lịch sử làm bài. Vui lòng thử lại.');
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setIsLoadingHistory(false);
+            });
+        return () => {
+            controller.abort();
+        };
+    }, [debouncedSearchTerm, page, user.id]);
 
     // Gọi API lấy thông tin chi tiết bài nộp để xem lại
     const handleOpenReview = async (submissionId) => {
@@ -35,31 +67,16 @@ export default function ScoreHistory() {
         }
     };
 
-    const filteredHistory = history.filter(item => 
-        item.testTitle?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
     const currentQ = reviewData?.questions?.[currentReviewIndex];
 
     return (
         <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex font-sans relative">
-            {/* Sidebar */}
-            <div className="w-64 bg-white border-r border-pink-100 p-6 flex flex-col justify-between hidden md:flex shadow-sm">
-                <div>
-                    <div className="text-xl font-black text-pink-600 tracking-wider mb-8">LYRA SAT</div>
-                    <div className="space-y-2">
-                        <button onClick={() => navigate('/home')} className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm">Trang chủ</button>
-                        <button onClick={() => navigate('/mission')} className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm">Nhiệm vụ</button>
-                        <button onClick={() => navigate('/score')} className="w-full text-left px-4 py-3 rounded-2xl bg-pink-500 text-white font-bold transition text-sm shadow-md shadow-pink-500/20">Điểm số</button>
-                        <button onClick={() => navigate('/vocab')} className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm">Từ vựng</button>
-                        <button onClick={() => navigate('/account')} className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm">Hồ sơ</button>
+            <StudentSidebar
+                footer={(
+                    <div className="bg-pink-50/60 p-4 rounded-3xl border border-pink-100 text-center">
                     </div>
-                </div>
-                <div className="bg-pink-50/60 p-4 rounded-3xl border border-pink-100 text-center">
-                    <p className="text-[11px] font-bold text-pink-700">Lyra</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Chúc bạn học tập hiệu quả!</p>
-                </div>
-            </div>
+                )}
+            />
 
             {/* Content Chính */}
             <div className="flex-1 p-8 overflow-y-auto">
@@ -75,20 +92,28 @@ export default function ScoreHistory() {
                                 type="text"
                                 placeholder="Search enter your keyword..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setPage(1);
+                                }}
                                 className="w-full bg-pink-50/50 border border-pink-200 rounded-2xl px-4 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500 transition"
                             />
                         </div>
-                        <button className="text-xs bg-pink-500 hover:bg-pink-600 text-white font-bold px-4 py-2.5 rounded-2xl transition shadow-sm shadow-pink-500/20 whitespace-nowrap">
-                            Tìm kiếm
-                        </button>
                     </div>
                 </div>
 
                 {/* Danh sách thẻ lịch sử */}
                 <div className="space-y-4">
-                    {filteredHistory.length > 0 ? (
-                        filteredHistory.map(item => (
+                    {isLoadingHistory ? (
+                        <div className="bg-white p-12 rounded-3xl border border-pink-100 text-center text-pink-600 text-xs">
+                            Đang tải lịch sử làm bài...
+                        </div>
+                    ) : historyError ? (
+                        <div role="alert" className="bg-white p-12 rounded-3xl border border-rose-100 text-center text-rose-500 text-xs">
+                            {historyError}
+                        </div>
+                    ) : history.length > 0 ? (
+                        history.map(item => (
                             <div 
                                 key={item.id} 
                                 className="bg-white p-6 rounded-3xl border border-pink-100 shadow-sm hover:shadow-md transition flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden"
@@ -113,7 +138,7 @@ export default function ScoreHistory() {
                                 <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
                                     <button 
                                         onClick={() => handleOpenReview(item.id)}
-                                        className="py-2.5 px-4 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold rounded-2xl transition shadow-sm flex items-center gap-1"
+                                        className="py-2.5 px-4 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold rounded-2xl transition shadow-sm flex items-center gap-1 cursor-pointer"
                                     >
                                         Xem lại bài làm 
                                     </button>
@@ -122,16 +147,32 @@ export default function ScoreHistory() {
                         ))
                     ) : (
                         <div className="bg-white p-12 rounded-3xl border border-pink-100 text-center text-slate-400 text-xs">
-                            Chưa có lịch sử làm bài nào.
+                            {debouncedSearchTerm ? 'Không tìm thấy lịch sử phù hợp.' : 'Chưa có lịch sử làm bài nào.'}
                         </div>
                     )}
                 </div>
+                {!isLoadingHistory && !historyError && (
+                    <Pagination
+                        page={page}
+                        pageSize={PAGE_SIZE}
+                        totalCount={totalCount}
+                        onPageChange={setPage}
+                    />
+                )}
             </div>
 
-            {/* --- MODAL REVIEW BÀI LÀM (HIỂN THỊ CHUẨN DẠNG ẢNH MẪU) --- */}
+            {isLoadingReview && !reviewData && (
+                <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+                    <p role="status" className="rounded-2xl bg-white px-6 py-4 text-sm font-bold text-pink-600 shadow-xl">
+                        Đang tải chi tiết bài làm...
+                    </p>
+                </div>
+            )}
+
+            {/* --- MODAL REVIEW BÀI LÀM (MỞ RỘNG TỐI ĐA CHIỀU RỘNG VÀ CAO) --- */}
             {reviewData && currentQ && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
-                    <div className="bg-white w-full max-w-5xl h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-pink-100">
+                    <div className="bg-white w-[96vw] max-w-[96vw] h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-pink-100">
                         
                         {/* Header Modal */}
                         <div className="bg-pink-50 border-b border-pink-100 px-6 py-4 flex justify-between items-center">
@@ -143,24 +184,24 @@ export default function ScoreHistory() {
                             </div>
                             <button 
                                 onClick={() => setReviewData(null)}
-                                className="w-8 h-8 rounded-full bg-white border border-pink-200 text-slate-500 font-bold flex items-center justify-center hover:bg-pink-100 transition"
+                                className="w-8 h-8 rounded-full bg-white border border-pink-200 text-slate-500 font-bold flex items-center justify-center hover:bg-pink-100 transition cursor-pointer"
                             >
                                 ✕
                             </button>
                         </div>
 
-                        {/* Nội dung câu hỏi (Chia đôi màn hình) */}
+                        {/* Nội dung câu hỏi (Chia đôi màn hình rộng rãi) */}
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100 overflow-hidden">
                             {/* Cột Trái: Passage */}
-                            <div className="bg-white p-8 overflow-y-auto">
+                            <div className="bg-white p-10 overflow-y-auto">
                                 <span className="text-[11px] font-bold text-pink-400 uppercase tracking-widest mb-3 block">Reading Passage</span>
                                 <p className="text-sm leading-relaxed text-slate-700 font-serif whitespace-pre-line">
-                                {currentQ.passageText || "Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải."}
+                                    {currentQ.passageText || "Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải."}
                                 </p>
                             </div>
 
                             {/* Cột Phải: Question & Các đáp án được tô màu */}
-                            <div className="bg-white p-8 overflow-y-auto flex flex-col justify-between">
+                            <div className="bg-white p-10 overflow-y-auto flex flex-col justify-between">
                                 <div>
                                     <h4 className="font-bold text-sm text-slate-800 mb-6 leading-relaxed whitespace-pre-line">
                                         {currentQ.questionText}
@@ -179,16 +220,13 @@ export default function ScoreHistory() {
                                             const isCorrectAns = opt.key.toUpperCase() === currentQ.correctAnswer.toUpperCase();
                                             const isUserSelected = opt.key.toUpperCase() === currentQ.selectedAnswer.toUpperCase();
 
-                                            // Xác định style màu sắc
                                             let containerStyle = "border-slate-200 bg-white text-slate-700";
                                             let badgeStyle = "border-slate-300 text-slate-500";
 
                                             if (isCorrectAns) {
-                                                // Đáp án ĐÚNG -> Tô màu xanh lá lá (chuẩn mẫu ảnh)
                                                 containerStyle = "border-emerald-500 bg-emerald-500 text-white font-semibold shadow-md";
                                                 badgeStyle = "bg-white text-emerald-600 border-white";
                                             } else if (isUserSelected && !isCorrectAns) {
-                                                // Học sinh chọn SAI -> Tô màu đỏ
                                                 containerStyle = "border-rose-500 bg-rose-500 text-white font-semibold shadow-md";
                                                 badgeStyle = "bg-white text-rose-600 border-white";
                                             }
@@ -213,7 +251,7 @@ export default function ScoreHistory() {
                                     <button
                                         disabled={currentReviewIndex === 0}
                                         onClick={() => setCurrentReviewIndex(prev => prev - 1)}
-                                        className={`px-5 py-2 rounded-2xl text-xs font-bold border transition ${currentReviewIndex === 0 ? 'opacity-40 cursor-not-allowed border-slate-200' : 'border-slate-200 hover:bg-pink-50'}`}
+                                        className={`px-5 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer ${currentReviewIndex === 0 ? 'opacity-40 cursor-not-allowed border-slate-200' : 'border-slate-200 hover:bg-pink-50'}`}
                                     >
                                         ‹ Câu trước
                                     </button>
@@ -221,7 +259,7 @@ export default function ScoreHistory() {
                                     <button
                                         disabled={currentReviewIndex === reviewData.questions.length - 1}
                                         onClick={() => setCurrentReviewIndex(prev => prev + 1)}
-                                        className={`px-5 py-2 rounded-2xl text-xs font-bold border transition ${currentReviewIndex === reviewData.questions.length - 1 ? 'opacity-40 cursor-not-allowed border-slate-200' : 'bg-pink-600 text-white border-pink-600 hover:bg-pink-700'}`}
+                                        className={`px-5 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer ${currentReviewIndex === reviewData.questions.length - 1 ? 'opacity-40 cursor-not-allowed border-slate-200' : 'bg-pink-600 text-white border-pink-600 hover:bg-pink-700'}`}
                                     >
                                         Câu tiếp ›
                                     </button>

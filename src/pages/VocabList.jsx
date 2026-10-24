@@ -1,76 +1,148 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import StudentSidebar from '../components/StudentSidebar';
+import Pagination from '../components/Pagination';
+
+const LIST_PAGE_SIZE = 8;
+const VOCAB_PAGE_SIZE = 10;
+
+const MOCK_VOCAB_DATA = {
+    SAT01: {
+        'Series 01': [
+            { id: 1, word: 'Ponder', phonetic: "'pɒndə", definition: 'trầm tư, suy ngẫm', synonyms: ['speculate'], example: 'He continued to ponder the problem.' },
+            { id: 2, word: 'Meticulous', phonetic: "mɪ'tɪkjʊləs", definition: 'tỉ mỉ, cẩn trọng', synonyms: ['thorough'], example: 'She is meticulous in her work.' }
+        ],
+        'Series 02': [
+            { id: 3, word: 'Ambiguous', phonetic: "æm'bɪɡjuəs", definition: 'mơ hồ, đa nghĩa', synonyms: ['unclear'], example: 'The reply was ambiguous.' }
+        ]
+    },
+    SAT02: {
+        'Series 01': [
+            { id: 4, word: 'Pragmatic', phonetic: "præɡ'mætɪk", definition: 'thực tế, thực dụng', synonyms: ['practical'], example: 'We need a pragmatic approach.' }
+        ]
+    }
+};
 
 export default function VocabList() {
     const [classList, setClassList] = useState([]);
+    const [classPage, setClassPage] = useState(1);
+    const [classCount, setClassCount] = useState(0);
     const [selectedClass, setSelectedClass] = useState(null); // Bước 1: Lớp đang chọn
     const [seriesList, setSeriesList] = useState([]);
+    const [seriesPage, setSeriesPage] = useState(1);
+    const [seriesCount, setSeriesCount] = useState(0);
     const [selectedSeries, setSelectedSeries] = useState(null); // Bước 2: Series đang chọn
     const [vocabList, setVocabList] = useState([]);
+    const [vocabPage, setVocabPage] = useState(1);
+    const [vocabCount, setVocabCount] = useState(0);
     const [studyMode, setStudyMode] = useState(false); // Bước 3: Vào học Flashcard trực tiếp
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
+    const [isLoadingVocab, setIsLoadingVocab] = useState(false);
 
     const navigate = useNavigate();
 
-    // Dữ liệu mẫu giả lập (Dùng khi chưa có API DB)
-    const mockData = {
-        'SAT01': {
-            'Series 01': [
-                { id: 1, word: 'Ponder', phonetic: "'pɒndə", definition: 'trầm tư, suy ngẫm', synonyms: ['speculate'], example: 'He continued to ponder the problem.' },
-                { id: 2, word: 'Meticulous', phonetic: "mɪ'tɪkjʊləs", definition: 'tỉ mỉ, cẩn trọng', synonyms: ['thorough'], example: 'She is meticulous in her work.' }
-            ],
-            'Series 02': [
-                { id: 3, word: 'Ambiguous', phonetic: "æm'bɪɡjuəs", definition: 'mơ hồ, đa nghĩa', synonyms: ['unclear'], example: 'The reply was ambiguous.' }
-            ]
-        },
-        'SAT02': {
-            'Series 01': [
-                { id: 4, word: 'Pragmatic', phonetic: "præɡ'mætɪk", definition: 'thực tế, thực dụng', synonyms: ['practical'], example: 'We need a pragmatic approach.' }
-            ]
-        }
-    };
-
-    // 1. Tải danh sách lớp học khi vào trang
+    // Tải từng trang danh sách lớp học.
     useEffect(() => {
-        api.get('/vocabularies/classes')
-            .then(res => setClassList(res.data))
-            .catch(() => {
-                setClassList(['SAT01', 'SAT02']); // Fallback nếu chưa có API
+        const controller = new AbortController();
+        api.get('/vocabularies/classes', {
+            params: { page: classPage, pageSize: LIST_PAGE_SIZE },
+            signal: controller.signal
+        })
+            .then(res => {
+                setClassList(res.data.items);
+                setClassCount(res.data.totalCount);
+                setClassPage(res.data.page);
+            })
+            .catch(err => {
+                if (err.code === 'ERR_CANCELED') return;
+                console.error('Lỗi tải danh sách lớp từ vựng:', err);
+                const classes = ['SAT01', 'SAT02'];
+                setClassList(classes.slice((classPage - 1) * LIST_PAGE_SIZE, classPage * LIST_PAGE_SIZE));
+                setClassCount(classes.length);
             });
-    }, []);
+        return () => {
+            controller.abort();
+        };
+    }, [classPage]);
 
-    // 2. Khi chọn Lớp -> Tải danh sách Series thuộc lớp đó
+    // Tải danh sách series cho lớp và trang hiện tại.
+    useEffect(() => {
+        if (!selectedClass) return;
+        const controller = new AbortController();
+        api.get(`/vocabularies/class/${encodeURIComponent(selectedClass)}/series`, {
+            params: { page: seriesPage, pageSize: LIST_PAGE_SIZE },
+            signal: controller.signal
+        })
+            .then(res => {
+                setSeriesList(res.data.items);
+                setSeriesCount(res.data.totalCount);
+                setSeriesPage(res.data.page);
+            })
+            .catch(err => {
+                if (err.code === 'ERR_CANCELED') return;
+                console.error('Lỗi tải danh sách series từ vựng:', err);
+                const classData = MOCK_VOCAB_DATA[selectedClass] || MOCK_VOCAB_DATA.SAT01;
+                const allSeries = Object.keys(classData);
+                setSeriesList(allSeries.slice((seriesPage - 1) * LIST_PAGE_SIZE, seriesPage * LIST_PAGE_SIZE));
+                setSeriesCount(allSeries.length);
+            });
+        return () => {
+            controller.abort();
+        };
+    }, [selectedClass, seriesPage]);
+
+    // 1. Khi chọn lớp, quay về trang đầu của các series.
     const handleSelectClass = (classCode) => {
         setSelectedClass(classCode);
         setSelectedSeries(null);
         setStudyMode(false);
-
-        api.get(`/vocabularies/class/${classCode}/series`)
-            .then(res => setSeriesList(res.data))
-            .catch(() => {
-                const classData = mockData[classCode] || mockData['SAT01'];
-                setSeriesList(Object.keys(classData));
-            });
+        setSeriesPage(1);
     };
 
-    // 3. Khi chọn Series -> Tải danh sách từ vựng thuộc lớp và series đó, rồi vào thẳng màn hình học Flashcard luôn
+    // Tải bộ thẻ theo trang để không lấy toàn bộ từ vựng cùng lúc.
+    useEffect(() => {
+        if (!selectedClass || !selectedSeries || !studyMode) return;
+        const controller = new AbortController();
+        setIsLoadingVocab(true);
+        api.get(
+            `/vocabularies/class/${encodeURIComponent(selectedClass)}/series/${encodeURIComponent(selectedSeries)}`,
+            {
+                params: { page: vocabPage, pageSize: VOCAB_PAGE_SIZE },
+                signal: controller.signal
+            }
+        )
+            .then(res => {
+                setVocabList(res.data.items);
+                setVocabCount(res.data.totalCount);
+                setVocabPage(res.data.page);
+            })
+            .catch(err => {
+                if (err.code === 'ERR_CANCELED') return;
+                console.error('Lỗi tải từ vựng:', err);
+                const classData = MOCK_VOCAB_DATA[selectedClass] || MOCK_VOCAB_DATA.SAT01;
+                const allWords = classData[selectedSeries] || [];
+                setVocabList(allWords.slice((vocabPage - 1) * VOCAB_PAGE_SIZE, vocabPage * VOCAB_PAGE_SIZE));
+                setVocabCount(allWords.length);
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setIsLoadingVocab(false);
+            });
+        return () => {
+            controller.abort();
+        };
+    }, [selectedClass, selectedSeries, studyMode, vocabPage]);
+
+    // 2. Khi chọn series, bắt đầu học từ trang đầu tiên.
     const handleSelectSeries = (seriesName) => {
         setSelectedSeries(seriesName);
+        setVocabList([]);
+        setVocabCount(0);
         setCurrentIndex(0);
         setIsFlipped(false);
-
-        api.get(`/vocabularies/class/${selectedClass}/series/${encodeURIComponent(seriesName)}`)
-            .then(res => {
-                setVocabList(res.data);
-                setStudyMode(true);
-            })
-            .catch(() => {
-                const classData = mockData[selectedClass] || mockData['SAT01'];
-                setVocabList(classData[seriesName] || []);
-                setStudyMode(true);
-            });
+        setVocabPage(1);
+        setStudyMode(true);
     };
 
     // Phát âm từ vựng
@@ -83,55 +155,18 @@ export default function VocabList() {
     };
 
     const currentCard = vocabList[currentIndex];
+    const currentWordNumber = vocabCount ? (vocabPage - 1) * VOCAB_PAGE_SIZE + currentIndex + 1 : 0;
 
     return (
         <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex font-sans select-none">
-            {/* Sidebar đồng bộ hoàn toàn với trang Home */}
-            <div className="w-64 bg-white border-r border-pink-100 p-6 flex flex-col justify-between hidden md:flex shadow-sm">
-                <div>
-                    <div className="text-xl font-black text-pink-600 tracking-wider mb-8">LYRA SAT</div>
-                    <div className="space-y-2">
-                        <button 
-                            onClick={() => navigate('/home')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm cursor-pointer"
-                        >
-                            Trang chủ
-                        </button>
-                        <button 
-                            onClick={() => navigate('/mission')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm cursor-pointer"
-                        >
-                            Nhiệm vụ
-                        </button>
-                        <button 
-                            onClick={() => navigate('/score')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm cursor-pointer"
-                        >
-                            Điểm số
-                        </button>
-                        <button 
-                            onClick={() => { setSelectedClass(null); setSelectedSeries(null); setStudyMode(false); }} 
-                            className="w-full text-left px-4 py-3 rounded-2xl bg-pink-500 text-white font-bold transition text-sm shadow-md shadow-pink-500/20 cursor-pointer"
-                        >
-                            Từ vựng 
-                        </button>
-                        <button 
-                            onClick={() => navigate('/account')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm cursor-pointer"
-                        >
-                            Hồ sơ
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <button 
-                        onClick={() => { localStorage.clear(); navigate('/'); }}
-                        className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold rounded-2xl transition cursor-pointer"
-                    >
-                        Đăng xuất
-                    </button>
-                </div>
-            </div>
+            <StudentSidebar
+                onVocabularyClick={() => {
+                    setSelectedClass(null);
+                    setSelectedSeries(null);
+                    setStudyMode(false);
+                    setClassPage(1);
+                }}
+            />
 
             {/* Nội dung chính bên phải */}
             <div className="flex-1 p-8 overflow-y-auto">
@@ -167,22 +202,36 @@ export default function VocabList() {
 
                 {/* GIAO DIỆN 1: Chọn Lớp học trước */}
                 {!selectedClass ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                        {classList.map((cls, index) => (
-                            <div 
-                                key={index} 
-                                onClick={() => handleSelectClass(cls)}
-                                className="bg-white p-6 rounded-3xl border border-pink-100 hover:border-pink-400 hover:shadow-lg cursor-pointer transition text-center group"
-                            >
-                                <div className="text-4xl mb-3 group-hover:scale-110 transition">🏫</div>
-                                <h3 className="font-extrabold text-pink-700 text-lg mb-1">Lớp {cls}</h3>
-                                <p className="text-xs text-slate-400">Xem khóa học từ vựng</p>
-                                <button className="mt-4 px-4 py-2 bg-pink-500 group-hover:bg-pink-600 text-white text-xs font-bold rounded-xl transition shadow-md shadow-pink-500/20">
-                                    Vào lớp →
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+                    <>
+                    {classList.length === 0 ? (
+                        <div className="bg-white p-12 rounded-3xl border border-pink-100 text-center text-xs text-slate-400 shadow-sm">
+                            Chưa có lớp từ vựng nào.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                            {classList.map((cls, index) => (
+                                <div 
+                                    key={index} 
+                                    onClick={() => handleSelectClass(cls)}
+                                    className="bg-white p-6 rounded-3xl border border-pink-100 hover:border-pink-400 hover:shadow-lg cursor-pointer transition text-center group"
+                                >
+                                    <div className="text-4xl mb-3 group-hover:scale-110 transition">🏫</div>
+                                    <h3 className="font-extrabold text-pink-700 text-lg mb-1">Lớp {cls}</h3>
+                                    <p className="text-xs text-slate-400">Xem khóa học từ vựng</p>
+                                    <button className="mt-4 px-4 py-2 bg-pink-500 group-hover:bg-pink-600 text-white text-xs font-bold rounded-xl transition shadow-md shadow-pink-500/20">
+                                        Vào lớp →
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <Pagination
+                        page={classPage}
+                        pageSize={LIST_PAGE_SIZE}
+                        totalCount={classCount}
+                        onPageChange={setClassPage}
+                    />
+                    </>
                 ) : !studyMode ? (
                     /* GIAO DIỆN 2: Hiển thị danh sách Series sau khi đã chọn Lớp */
                     seriesList.length === 0 ? (
@@ -190,6 +239,7 @@ export default function VocabList() {
                             Chưa có bộ từ vựng nào cho lớp {selectedClass}.
                         </div>
                     ) : (
+                        <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                             {seriesList.map((s, index) => (
                                 <div 
@@ -206,66 +256,82 @@ export default function VocabList() {
                                 </div>
                             ))}
                         </div>
+                        <Pagination
+                            page={seriesPage}
+                            pageSize={LIST_PAGE_SIZE}
+                            totalCount={seriesCount}
+                            onPageChange={setSeriesPage}
+                        />
+                        </>
                     )
                 ) : (
                     /* GIAO DIỆN 3: Vào học Flashcard trực tiếp */
                     <div className="max-w-2xl mx-auto flex flex-col items-center">
                         <div className="w-full flex justify-between items-center text-xs font-bold text-slate-400 mb-3">
-                            <span>Từ {currentIndex + 1} / {vocabList.length} trong {selectedSeries}</span>
-                            <span>{Math.round(((currentIndex + 1) / vocabList.length) * 100)}% Hoàn thành</span>
+                            <span>Từ {currentWordNumber} / {vocabCount} trong {selectedSeries}</span>
+                            <span>{vocabCount ? Math.round((currentWordNumber / vocabCount) * 100) : 0}% Hoàn thành</span>
                         </div>
                         <div className="w-full bg-pink-100 h-2 rounded-full mb-6 overflow-hidden">
                             <div 
                                 className="bg-pink-500 h-full transition-all duration-300"
-                                style={{ width: `${((currentIndex + 1) / vocabList.length) * 100}%` }}
+                                style={{ width: `${vocabCount ? (currentWordNumber / vocabCount) * 100 : 0}%` }}
                             ></div>
                         </div>
 
                         {/* MẶT THẺ FLASHCARD */}
-                        <div 
-                            onClick={() => setIsFlipped(!isFlipped)}
-                            className="w-full min-h-[340px] bg-white rounded-3xl border border-pink-100 shadow-md p-8 flex flex-col justify-between items-center text-center cursor-pointer hover:shadow-xl transition-all duration-300 relative select-none"
-                        >
-                            <span className="absolute top-4 right-6 text-[11px] font-bold text-pink-400 uppercase tracking-wider">
-                                {isFlipped ? 'Mặt sau (Nghĩa & Chi tiết)' : 'Mặt trước (English Word 🔄)'}
-                            </span>
+                        {isLoadingVocab ? (
+                            <div className="w-full min-h-[340px] bg-white rounded-3xl border border-pink-100 shadow-md p-8 flex items-center justify-center text-sm font-bold text-pink-600">
+                                Đang tải từ vựng...
+                            </div>
+                        ) : currentCard ? (
+                            <div
+                                onClick={() => setIsFlipped(!isFlipped)}
+                                className="w-full min-h-[340px] bg-white rounded-3xl border border-pink-100 shadow-md p-8 flex flex-col justify-between items-center text-center cursor-pointer hover:shadow-xl transition-all duration-300 relative select-none"
+                            >
+                                <span className="absolute top-4 right-6 text-[11px] font-bold text-pink-400 uppercase tracking-wider">
+                                    {isFlipped ? 'Mặt sau (Nghĩa & Chi tiết)' : 'Mặt trước (English Word 🔄)'}
+                                </span>
 
-                            {/* Mặt trước hiển thị Tiếng Anh, Mặt sau hiển thị Nghĩa */}
-                            {!isFlipped ? (
-                                <div className="my-auto flex flex-col items-center">
-                                    <span className="text-xs font-bold uppercase tracking-widest text-pink-500 mb-2">English Word</span>
-                                    <h2 className="text-4xl font-black text-pink-600 mb-4">{currentCard.word}</h2>
-                                    <div className="flex items-center gap-2 text-slate-500 text-sm font-semibold">
-                                        <span>UK</span>
-                                        <button onClick={(e) => { e.stopPropagation(); handleSpeak(currentCard.word); }} className="hover:text-pink-600 transition p-1">
-                                            🔊
-                                        </button>
-                                        {currentCard.phonetic && <span>/{currentCard.phonetic}/</span>}
+                                {!isFlipped ? (
+                                    <div className="my-auto flex flex-col items-center">
+                                        <span className="text-xs font-bold uppercase tracking-widest text-pink-500 mb-2">English Word</span>
+                                        <h2 className="text-4xl font-black text-pink-600 mb-4">{currentCard.word}</h2>
+                                        <div className="flex items-center gap-2 text-slate-500 text-sm font-semibold">
+                                            <span>UK</span>
+                                            <button onClick={(e) => { e.stopPropagation(); handleSpeak(currentCard.word); }} className="hover:text-pink-600 transition p-1">
+                                                🔊
+                                            </button>
+                                            {currentCard.phonetic && <span>/{currentCard.phonetic}/</span>}
+                                        </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="my-auto flex flex-col items-center">
-                                    <h2 className="text-2xl font-extrabold text-[#2D5A4C] mb-3">
-                                        {currentCard.definition}
-                                    </h2>
-                                    {currentCard.synonyms && currentCard.synonyms.length > 0 && (
-                                        <div className="w-full border border-slate-200 rounded-2xl p-3 bg-slate-50/50 max-w-md mb-3">
-                                            <div className="text-[10px] font-extrabold text-slate-700 mb-1 uppercase tracking-wide">Synonyms</div>
-                                            <div className="text-sm font-bold text-slate-700">
-                                                {currentCard.synonyms.join(' , ')}
+                                ) : (
+                                    <div className="my-auto flex flex-col items-center">
+                                        <h2 className="text-2xl font-extrabold text-[#2D5A4C] mb-3">
+                                            {currentCard.definition}
+                                        </h2>
+                                        {currentCard.synonyms && currentCard.synonyms.length > 0 && (
+                                            <div className="w-full border border-slate-200 rounded-2xl p-3 bg-slate-50/50 max-w-md mb-3">
+                                                <div className="text-[10px] font-extrabold text-slate-700 mb-1 uppercase tracking-wide">Synonyms</div>
+                                                <div className="text-sm font-bold text-slate-700">
+                                                    {currentCard.synonyms.join(' , ')}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-                                    {currentCard.example && (
-                                        <div className="bg-pink-50/50 p-3 rounded-2xl border border-pink-100 max-w-md text-xs text-slate-600 italic">
-                                            "{currentCard.example}"
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                                        )}
+                                        {currentCard.example && (
+                                            <div className="bg-pink-50/50 p-3 rounded-2xl border border-pink-100 max-w-md text-xs text-slate-600 italic">
+                                                "{currentCard.example}"
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
-                            <p className="text-[11px] text-slate-300 font-semibold mt-4">Bấm vào thẻ để lật mặt xem thông tin</p>
-                        </div>
+                                <p className="text-[11px] text-slate-300 font-semibold mt-4">Bấm vào thẻ để lật mặt xem thông tin</p>
+                            </div>
+                        ) : (
+                            <div className="w-full min-h-[340px] bg-white rounded-3xl border border-pink-100 shadow-md p-8 flex items-center justify-center text-sm text-slate-400">
+                                Bộ từ vựng này hiện chưa có từ nào.
+                            </div>
+                        )}
 
                         {/* Nút điều hướng */}
                         <div className="flex items-center gap-6 mt-8">
@@ -274,10 +340,14 @@ export default function VocabList() {
                                     if (currentIndex > 0) {
                                         setCurrentIndex(currentIndex - 1);
                                         setIsFlipped(false);
+                                    } else if (vocabPage > 1) {
+                                        setVocabPage(vocabPage - 1);
+                                        setCurrentIndex(VOCAB_PAGE_SIZE - 1);
+                                        setIsFlipped(false);
                                     }
                                 }}
-                                disabled={currentIndex === 0}
-                                className={`w-12 h-12 rounded-2xl border flex items-center justify-center font-bold text-lg transition ${currentIndex === 0 ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-white hover:bg-pink-50 text-pink-600 border-pink-200 shadow-sm cursor-pointer'}`}
+                                disabled={(currentIndex === 0 && vocabPage === 1) || isLoadingVocab}
+                                className={`w-12 h-12 rounded-2xl border flex items-center justify-center font-bold text-lg transition ${(currentIndex === 0 && vocabPage === 1) || isLoadingVocab ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-white hover:bg-pink-50 text-pink-600 border-pink-200 shadow-sm cursor-pointer'}`}
                             >
                                 ‹
                             </button>
@@ -294,10 +364,14 @@ export default function VocabList() {
                                     if (currentIndex < vocabList.length - 1) {
                                         setCurrentIndex(currentIndex + 1);
                                         setIsFlipped(false);
+                                    } else if (currentWordNumber < vocabCount) {
+                                        setVocabPage(vocabPage + 1);
+                                        setCurrentIndex(0);
+                                        setIsFlipped(false);
                                     }
                                 }}
-                                disabled={currentIndex === vocabList.length - 1}
-                                className={`w-12 h-12 rounded-2xl border flex items-center justify-center font-bold text-lg transition ${currentIndex === vocabList.length - 1 ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-pink-500 hover:bg-pink-600 text-white border-pink-500 shadow-md shadow-pink-500/20 cursor-pointer'}`}
+                                disabled={(currentWordNumber >= vocabCount) || isLoadingVocab}
+                                className={`w-12 h-12 rounded-2xl border flex items-center justify-center font-bold text-lg transition ${(currentWordNumber >= vocabCount) || isLoadingVocab ? 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed' : 'bg-pink-500 hover:bg-pink-600 text-white border-pink-500 shadow-md shadow-pink-500/20 cursor-pointer'}`}
                             >
                                 ›
                             </button>

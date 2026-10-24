@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import StudentSidebar from '../components/StudentSidebar';
 
 const EXAM_DATE_OPTIONS = ['2026-10-03', '2026-12-05', '2027-03-13', '2027-05-08'];
 
@@ -97,52 +98,7 @@ export default function MyAccount() {
 
     return (
         <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex font-sans relative select-none">
-            {/* Sidebar đồng bộ hoàn toàn với trang Home */}
-            <div className="w-64 bg-white border-r border-pink-100 p-6 flex flex-col justify-between hidden md:flex shadow-sm">
-                <div>
-                    <div className="text-xl font-black text-pink-600 tracking-wider mb-8">LYRA SAT</div>
-                    <div className="space-y-2">
-                        <button 
-                            onClick={() => navigate('/home')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm cursor-pointer"
-                        >
-                            Trang chủ
-                        </button>
-                        <button 
-                            onClick={() => navigate('/mission')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm cursor-pointer"
-                        >
-                            Nhiệm vụ
-                        </button>
-                        <button 
-                            onClick={() => navigate('/score')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm cursor-pointer"
-                        >
-                            Điểm số
-                        </button>
-                        <button 
-                            onClick={() => navigate('/vocab')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm cursor-pointer"
-                        >
-                            Từ vựng 
-                        </button>
-                        <button 
-                            onClick={() => navigate('/account')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl bg-pink-500 text-white font-bold transition text-sm shadow-md shadow-pink-500/20 cursor-pointer"
-                        >
-                            Hồ sơ
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <button 
-                        onClick={() => { localStorage.clear(); navigate('/'); }}
-                        className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold rounded-2xl transition cursor-pointer"
-                    >
-                        Đăng xuất
-                    </button>
-                </div>
-            </div>
+            <StudentSidebar />
 
             {/* Nội dung chính */}
             <div className="flex-1 p-8 overflow-y-auto">

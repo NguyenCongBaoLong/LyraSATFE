@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StudentSidebar from '../components/StudentSidebar';
 
-// Import các ảnh banner từ thư mục assets của bạn
-import banner1 from '../assets/banner1.jpg';
-import banner2 from '../assets/banner2.jpg';
+// Import các ảnh banner và mascot từ thư mục assets của bạn
+import banner1 from '../assets/banner1-optimized.jpg';
+import banner2 from '../assets/banner2-optimized.jpg';
+import foxMascot from '../assets/fox-mascot-optimized.png';
 
 export default function Home() {
     const [user, setUser] = useState(null);
@@ -30,7 +32,7 @@ export default function Home() {
         setUser(storedUser);
 
         // Lấy ngày kiểm tra từ user (hoặc localStorage / mặc định)
-        const targetDateStr = storedUser.examDate || localStorage.getItem('lyra_exam_date') || '2026-10-03';
+        const targetDateStr = storedUser.examDate || localStorage.getItem('lyra_exam_date') || '2026-12-05';
         
         const dateObj = new Date(targetDateStr);
         const formattedDateText = `thg ${dateObj.getMonth() + 1}. ${dateObj.getDate()}, ${dateObj.getFullYear()}`;
@@ -69,52 +71,23 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex font-sans">
-            {/* Sidebar tông màu hồng */}
-            <div className="w-64 bg-white border-r border-pink-100 p-6 flex flex-col justify-between hidden md:flex shadow-sm">
-                <div>
-                    <div className="text-xl font-black text-pink-600 tracking-wider mb-8">LYRA SAT</div>
-                    <div className="space-y-2">
-                        <button 
-                            onClick={() => navigate('/home')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl bg-pink-500 text-white font-bold transition text-sm shadow-md shadow-pink-500/20"
-                        >
-                            Trang chủ
-                        </button>
-                        <button 
-                            onClick={() => navigate('/mission')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm"
-                        >
-                            Nhiệm vụ
-                        </button>
-                        <button 
-                            onClick={() => navigate('/score')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm"
-                        >
-                            Điểm số
-                        </button>
-                        <button 
-                            onClick={() => navigate('/vocab')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm"
-                        >
-                            Từ vựng 
-                        </button>
-                        <button 
-                            onClick={() => navigate('/account')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm"
-                        >
-                            Hồ sơ
-                        </button>
+            <StudentSidebar
+                footer={(
+                    <div className="flex flex-col items-center my-2 relative">
+                        <div className="bg-pink-100 border border-pink-200 px-4 py-2 rounded-2xl text-pink-900 text-xs font-bold shadow-sm mb-2 relative animate-bounce whitespace-nowrap">
+                            Cố lên bạn nhé! ✨
+                        </div>
+                        <img
+                            src={foxMascot}
+                            alt="Fox Mascot"
+                            className="w-40 h-40 object-contain drop-shadow-md"
+                            onError={(e) => {
+                                e.target.style.display = 'none';
+                            }}
+                        />
                     </div>
-                </div>
-                <div>
-                    <button 
-                        onClick={() => { localStorage.clear(); navigate('/'); }}
-                        className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold rounded-2xl transition"
-                    >
-                        Đăng xuất
-                    </button>
-                </div>
-            </div>
+                )}
+            />
 
             {/* Nội dung chính bên phải */}
             <div className="flex-1 p-8 overflow-y-auto">
@@ -149,13 +122,13 @@ export default function Home() {
 
                     <button 
                         onClick={() => setCurrentBannerIndex((prev) => (prev - 1 + banners.length) % banners.length)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-pink-600 w-8 h-8 rounded-full flex items-center justify-center font-bold shadow transition"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-pink-600 w-8 h-8 rounded-full flex items-center justify-center font-bold shadow transition cursor-pointer"
                     >
                         ‹
                     </button>
                     <button 
                         onClick={() => setCurrentBannerIndex((prev) => (prev + 1) % banners.length)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-pink-600 w-8 h-8 rounded-full flex items-center justify-center font-bold shadow transition"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-pink-600 w-8 h-8 rounded-full flex items-center justify-center font-bold shadow transition cursor-pointer"
                     >
                         ›
                     </button>
@@ -165,7 +138,7 @@ export default function Home() {
                             <button 
                                 key={idx} 
                                 onClick={() => setCurrentBannerIndex(idx)}
-                                className={`h-2 rounded-full transition ${currentBannerIndex === idx ? 'bg-pink-600 w-5' : 'bg-pink-200 w-2'}`}
+                                className={`h-2 rounded-full transition cursor-pointer ${currentBannerIndex === idx ? 'bg-pink-600 w-5' : 'bg-pink-200 w-2'}`}
                             />
                         ))}
                     </div>

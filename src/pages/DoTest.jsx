@@ -15,6 +15,9 @@ export default function DoTest() {
     const [attemptInfo, setAttemptInfo] = useState(null);
     const [checkingAttempt, setCheckingAttempt] = useState(true);
 
+    // State quản lý việc ẩn/hiện bảng danh sách câu hỏi (Question Palette Modal hoặc Drawer)
+    const [showPalette, setShowPalette] = useState(false);
+
     const user = JSON.parse(localStorage.getItem('user')) || {};
     const studentId = user.id || 1; // Lấy ID học sinh đang đăng nhập
 
@@ -75,7 +78,7 @@ export default function DoTest() {
             })
             .catch(err => {
                 console.error("Lỗi kiểm tra lượt làm bài:", err);
-                setCheckingAttempt(false); // Vẫn cho qua nếu lỗi kết nối hoặc bỏ qua lớp kiểm tra tuỳ chọn
+                setCheckingAttempt(false);
             });
     }, [id, studentId]);
 
@@ -89,7 +92,7 @@ export default function DoTest() {
     }, [markedQuestions, id]);
 
     useEffect(() => {
-        if (!allowed) return; // Nếu không được phép làm bài thì không cần tải đề
+        if (!allowed) return;
 
         api.get(`/tests/${id}`)
             .then(res => {
@@ -99,7 +102,6 @@ export default function DoTest() {
                     duration: res.data.duration
                 });
 
-                // Tính toán lại thời gian còn lại dựa trên thời điểm bắt đầu thực tế
                 const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
                 const remaining = totalDurationSec - elapsedSec;
                 
@@ -181,7 +183,6 @@ export default function DoTest() {
 
             const response = await api.post('/submissions', submissionData);
             
-            // Xóa dữ liệu tạm trong sessionStorage khi đã nộp thành công hẳn
             sessionStorage.removeItem(`test_${id}_answers`);
             sessionStorage.removeItem(`test_${id}_marks`);
             sessionStorage.removeItem(`test_${id}_start_time`);
@@ -217,12 +218,10 @@ export default function DoTest() {
         );
     };
 
-    // Hiển thị trạng thái đang kiểm tra quyền làm bài
     if (checkingAttempt) {
         return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white font-sans">Đang kiểm tra lượt làm bài...</div>;
     }
 
-    // Hiển thị thông báo chặn nếu học sinh đã hết lượt
     if (!allowed) {
         return (
             <div className="min-h-screen bg-[#FFF5F7] flex items-center justify-center p-6 font-sans">
@@ -320,11 +319,65 @@ export default function DoTest() {
                 <div className="text-xs font-bold text-slate-700 tracking-wide">
                     Section: {testData.title}
                 </div>
-                <div className="bg-pink-50 border border-pink-200 px-4 py-1.5 rounded-xl text-xs font-mono font-bold text-pink-700 flex items-center gap-2 shadow-sm">
-                    <span>⏱</span>
-                    <span>{formatTime(timeLeft)}</span>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => setShowPalette(!showPalette)}
+                        className="bg-pink-100 hover:bg-pink-200 text-pink-700 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                        <span>📋 Danh sách câu ({Object.keys(selectedAnswers).length}/{questions.length})</span>
+                    </button>
+                    <div className="bg-pink-50 border border-pink-200 px-4 py-1.5 rounded-xl text-xs font-mono font-bold text-pink-700 flex items-center gap-2 shadow-sm">
+                        <span>⏱</span>
+                        <span>{formatTime(timeLeft)}</span>
+                    </div>
                 </div>
             </div>
+
+            {/* Bảng danh sách câu hỏi dạng bo tròn (Palette Drawer / Popup) */}
+            {showPalette && (
+                <div className="bg-white border-b border-pink-100 p-4 shadow-md animate-fadeIn">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="flex justify-between items-center mb-3">
+                            <div className="flex items-center gap-4 text-xs font-bold text-slate-600">
+                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Đã làm</span>
+                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> Đã đánh dấu (Review)</span>
+                                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-slate-200 inline-block"></span> Chưa làm</span>
+                            </div>
+                            <button onClick={() => setShowPalette(false)} className="text-xs text-slate-400 hover:text-slate-600 font-bold">✕ Đóng</button>
+                        </div>
+                        <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1">
+                            {questions.map((q, idx) => {
+                                const isAnswered = selectedAnswers[q.id] !== undefined;
+                                const isMarked = markedQuestions[q.id];
+                                const isCurrent = currentIndex === idx;
+
+                                // Xác định màu sắc bo tròn
+                                let btnBg = "bg-slate-100 text-slate-600 border-slate-200";
+                                if (isAnswered) {
+                                    btnBg = "bg-emerald-500 text-white border-emerald-500 font-bold shadow-sm";
+                                }
+                                if (isMarked) {
+                                    btnBg = "bg-amber-400 text-white border-amber-400 font-bold shadow-sm";
+                                }
+
+                                return (
+                                    <button
+                                        key={q.id}
+                                        onClick={() => {
+                                            setCurrentIndex(idx);
+                                            setShowPalette(false);
+                                        }}
+                                        className={`w-9 h-9 rounded-full border flex items-center justify-center text-xs font-bold transition cursor-pointer ${btnBg} ${isCurrent ? 'ring-2 ring-pink-500 ring-offset-2 scale-105' : 'hover:opacity-80'}`}
+                                        title={`Câu ${idx + 1}`}
+                                    >
+                                        {idx + 1}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Khung chia đôi màn hình */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100">
@@ -388,6 +441,13 @@ export default function DoTest() {
                             className={`px-6 py-2.5 rounded-2xl text-xs font-bold border transition cursor-pointer ${currentIndex === 0 ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400' : 'border-slate-200 text-slate-700 hover:bg-pink-50'}`}
                         >
                             ‹ Câu trước
+                        </button>
+
+                        <button 
+                            onClick={() => setShowPalette(!showPalette)}
+                            className="text-xs font-extrabold text-pink-600 bg-pink-50 border border-pink-200 px-4 py-2 rounded-2xl hover:bg-pink-100 transition cursor-pointer shadow-sm"
+                        >
+                            Question {currentIndex + 1} of {questions.length} ︿
                         </button>
 
                         {currentIndex < questions.length - 1 ? (

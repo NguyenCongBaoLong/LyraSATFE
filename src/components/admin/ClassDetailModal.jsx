@@ -1,10 +1,17 @@
 import React from 'react';
+import Pagination from '../Pagination';
 
 export default function ClassDetailModal({
     selectedClass,
     onClose,
     classStudents,
+    classStudentPage,
+    classStudentCount,
+    onClassStudentPageChange,
     availableStudents,
+    availableStudentPage,
+    availableStudentCount,
+    onAvailableStudentPageChange,
     studentToAddId,
     setStudentToAddId,
     isLoadingStudents,
@@ -36,33 +43,49 @@ export default function ClassDetailModal({
                     </button>
                 </div>
 
-                {/* Form Thêm Học Sinh */}
-                <form onSubmit={onAddStudent} className="mb-6 p-4 bg-pink-50/50 rounded-2xl border border-pink-100 flex gap-2 items-center">
-                    <select 
-                        value={studentToAddId}
-                        onChange={(e) => setStudentToAddId(e.target.value)}
-                        className="w-full px-3 py-2 bg-white rounded-xl border border-pink-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-400 cursor-pointer"
-                    >
-                        <option value="">-- Chọn học sinh để thêm vào lớp --</option>
-                        {availableStudents.map(s => (
-                            <option key={s.id || s.Id} value={s.id || s.Id}>
-                                {s.fullName || s.FullName} ({s.email || s.Email}) {s.classCode ? `[Lớp: ${s.classCode}]` : '[Chưa có lớp]'}
-                            </option>
-                        ))}
-                    </select>
-                    <button 
-                        type="submit"
-                        disabled={!studentToAddId}
-                        className="px-4 py-2 bg-pink-500 hover:bg-pink-600 disabled:bg-slate-300 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer whitespace-nowrap"
-                    >
-                         Thêm
-                    </button>
-                </form>
+                {/* Học sinh có thể thêm vào lớp */}
+                <div className="mb-6">
+                    <div className="flex justify-between items-center mb-2">
+                        <h4 className="text-xs font-bold uppercase text-slate-400">
+                            Học sinh có thể thêm vào lớp
+                        </h4>
+                        <span className="text-[11px] text-slate-400">{availableStudentCount} học sinh</span>
+                    </div>
+                    <form onSubmit={onAddStudent} className="p-4 bg-pink-50/50 rounded-2xl border border-pink-100 flex gap-2 items-center">
+                        <select 
+                            value={studentToAddId}
+                            onChange={(e) => setStudentToAddId(e.target.value)}
+                            className="w-full px-3 py-2 bg-white rounded-xl border border-pink-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-400 cursor-pointer"
+                        >
+                            <option value="">-- Chọn học sinh để thêm vào lớp --</option>
+                            {availableStudents.map(s => (
+                                <option key={s.id || s.Id} value={s.id || s.Id}>
+                                    {s.fullName || s.FullName} ({s.email || s.Email}) {s.classCode ? `[Lớp: ${s.classCode}]` : '[Chưa có lớp]'}
+                                </option>
+                            ))}
+                        </select>
+                        <button 
+                            type="submit"
+                            disabled={!studentToAddId}
+                            className="px-4 py-2 bg-pink-500 hover:bg-pink-600 disabled:bg-slate-300 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer whitespace-nowrap"
+                        >
+                            Thêm
+                        </button>
+                    </form>
+                    <Pagination
+                        page={availableStudentPage}
+                        pageSize={10}
+                        totalCount={availableStudentCount}
+                        onPageChange={onAvailableStudentPageChange}
+                        itemLabel="học sinh có thể thêm"
+                        ariaLabel="Phân trang học sinh có thể thêm"
+                    />
+                </div>
 
                 {/* Danh Sách Học Sinh */}
                 <div>
                     <h4 className="text-xs font-bold uppercase text-slate-400 mb-3">
-                        Danh sách Học Sinh ({classStudents.length})
+                        Danh sách Học Sinh ({classStudentCount})
                     </h4>
 
                     {isLoadingStudents ? (
@@ -81,6 +104,16 @@ export default function ClassDetailModal({
                                 </div>
                             ))}
                         </div>
+                    )}
+                    {!isLoadingStudents && (
+                        <Pagination
+                            page={classStudentPage}
+                            pageSize={8}
+                            totalCount={classStudentCount}
+                            onPageChange={onClassStudentPageChange}
+                            itemLabel="học sinh trong lớp"
+                            ariaLabel="Phân trang học sinh trong lớp"
+                        />
                     )}
                 </div>
 

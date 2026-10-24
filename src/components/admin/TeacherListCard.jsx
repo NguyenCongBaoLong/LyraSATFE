@@ -1,9 +1,10 @@
 import React from 'react';
+import Pagination from '../Pagination';
 
-export default function TeacherListCard({ teachers }) {
+export default function TeacherListCard({ teachers, page, pageSize, totalCount, onPageChange }) {
     return (
         <div className="bg-white p-8 rounded-3xl border border-pink-100 shadow-sm">
-            <h2 className="text-base font-bold text-pink-900 mb-4">Danh Sách Giáo Viên ({teachers.length})</h2>
+            <h2 className="text-base font-bold text-pink-900 mb-4">Danh Sách Giáo Viên ({totalCount})</h2>
             <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                 {teachers.length === 0 ? (
                     <p className="text-xs text-slate-400 italic text-center py-6">Chưa có giáo viên nào trong hệ thống.</p>
@@ -19,6 +20,12 @@ export default function TeacherListCard({ teachers }) {
                     ))
                 )}
             </div>
+            <Pagination
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={onPageChange}
+            />
         </div>
     );
 }

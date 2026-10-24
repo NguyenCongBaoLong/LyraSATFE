@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Home from './pages/Home';
 import Mission from './pages/Mission';
@@ -40,7 +40,7 @@ function App() {
         </Route>
 
         {/* Route dự phòng nếu link cũ gọi trực tiếp /teacher-dashboard */}
-        <Route path="/teacher-dashboard" element={<TeacherOverview />} />
+        <Route path="/teacher-dashboard" element={<Navigate to="/teacher/overview" replace />} />
       </Routes>
     </Router>
   );

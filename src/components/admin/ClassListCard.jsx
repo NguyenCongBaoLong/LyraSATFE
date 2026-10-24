@@ -1,15 +1,28 @@
 import React from 'react';
+import Pagination from '../Pagination';
 
-export default function ClassListCard({ classesList, teachers, onOpenClass, onDeleteClass, onAssignTeacher }) {
+export default function ClassListCard({
+    classesList,
+    teachers,
+    page,
+    pageSize,
+    totalCount,
+    onPageChange,
+    onOpenClass,
+    onDeleteClass,
+    onAssignTeacher
+}) {
     return (
         <div className="bg-white p-8 rounded-3xl border border-pink-100 shadow-sm">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-base font-bold text-pink-900">Danh Sách Lớp Học ({classesList.length})</h2>
+                <h2 className="text-base font-bold text-pink-900">Danh Sách Lớp Học ({totalCount})</h2>
                 <span className="text-[11px] text-pink-500 font-medium"> Nhấp vào lớp để xem học sinh</span>
             </div>
 
             <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1">
-                {classesList.map(c => {
+                {classesList.length === 0 ? (
+                    <p className="py-8 text-center text-xs text-slate-400">Chưa có lớp học nào trong hệ thống.</p>
+                ) : classesList.map(c => {
                     const id = c.id ?? c.Id;
                     const code = c.classCode || c.ClassCode;
                     const name = c.className || c.ClassName;
@@ -64,6 +77,12 @@ export default function ClassListCard({ classesList, teachers, onOpenClass, onDe
                     );
                 })}
             </div>
+            <Pagination
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={onPageChange}
+            />
         </div>
     );
 }

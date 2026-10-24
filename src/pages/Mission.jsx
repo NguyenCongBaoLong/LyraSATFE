@@ -1,12 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import StudentSidebar from '../components/StudentSidebar';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 8;
+const tabStatuses = {
+    'Làm gấp': 'urgent',
+    'Đang làm': 'active',
+    'Hết hạn': 'expired'
+};
 
 export default function Mission() {
     const [user, setUser] = useState(null);
     const [tests, setTests] = useState([]);
     const [activeTab, setActiveTab] = useState('Đang làm'); // 'Làm gấp' | 'Đang làm' | 'Hết hạn'
-    const [viewMode, setViewMode] = useState('Deadline'); // Deadline | Calendar
+    const [page, setPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -17,95 +29,54 @@ export default function Mission() {
         }
         setUser(storedUser);
 
-        // Lấy danh sách bài test từ Backend dựa theo classCode của học sinh
         const classCode = storedUser.classCode || 'SAT01';
-        api.get(`/tests/class/${classCode}`)
+        setIsLoading(true);
+        setLoadError('');
+        setTests([]);
+        const controller = new AbortController();
+        api.get(`/tests/class/${classCode}`, {
+            params: {
+                status: tabStatuses[activeTab],
+                studentId: storedUser.id,
+                page,
+                pageSize: PAGE_SIZE
+            },
+            signal: controller.signal
+        })
             .then(res => {
-                if (res.data) {
-                    setTests(res.data);
-                }
+                setTests(res.data.items);
+                setTotalCount(res.data.totalCount);
+                setPage(res.data.page);
             })
             .catch(err => {
+                if (err.code === 'ERR_CANCELED') return;
                 console.error("Lỗi tải danh sách bài tập:", err);
-                // Dữ liệu mẫu dự phòng khi lỗi kết nối
-                setTests([
-                    { id: 1, title: '[SAT01] PRACTICE TEST 01 - READING', deadline: new Date(Date.now() + 12 * 3600 * 1000).toISOString() }, // Sắp hết hạn trong 12h (Làm gấp)
-                    { id: 2, title: '[SAT01] MATH MODULE QUIZ 01', deadline: new Date(Date.now() + 72 * 3600 * 1000).toISOString() }, // Còn nhiều thời gian (Đang làm)
-                    { id: 3, title: '[SAT01] INTRODUCTORY TEST', deadline: '2025-01-01T12:00:00' } // Đã qua hạn (Hết hạn)
-                ]);
+                setTotalCount(0);
+                setLoadError('Không thể tải danh sách bài tập. Vui lòng thử lại.');
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setIsLoading(false);
             });
-    }, [navigate]);
+        return () => {
+            controller.abort();
+        };
+    }, [activeTab, navigate, page]);
 
     if (!user) return null;
 
-    // Phân loại bài tập tự động dựa trên thời hạn (deadline)
-    const classifiedTests = tests.map(test => {
-        if (!test.deadline) return { ...test, category: 'Đang làm', statusTag: 'Đang làm', tagColor: 'bg-pink-500' };
-        
-        const now = new Date().getTime();
-        const deadlineTime = new Date(test.deadline).getTime();
-        const diffHours = (deadlineTime - now) / (1000 * 60 * 60);
-
-        if (diffHours <= 0) {
-            return { ...test, category: 'Hết hạn', statusTag: 'Hết hạn', tagColor: 'bg-slate-400' };
-        } else if (diffHours <= 24) {
-            return { ...test, category: 'Làm gấp', statusTag: 'Gấp (<24h)', tagColor: 'bg-red-500' };
-        } else {
-            return { ...test, category: 'Đang làm', statusTag: 'Đang làm', tagColor: 'bg-pink-500' };
-        }
-    });
-
-    // Lọc bài tập theo tab đang chọn
-    const filteredTests = classifiedTests.filter(t => t.category === activeTab);
+    const displayTests = tests.map(test => ({
+        ...test,
+        statusTag: tabStatuses[activeTab] === 'urgent' ? 'Gấp (<24h)' : activeTab,
+        tagColor: tabStatuses[activeTab] === 'urgent'
+            ? 'bg-red-500'
+            : tabStatuses[activeTab] === 'expired'
+                ? 'bg-slate-400'
+                : 'bg-pink-500'
+    }));
 
     return (
         <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex font-sans">
-            {/* Sidebar tông màu hồng đồng bộ trang Home */}
-            <div className="w-64 bg-white border-r border-pink-100 p-6 flex flex-col justify-between hidden md:flex shadow-sm">
-                <div>
-                    <div className="text-xl font-black text-pink-600 tracking-wider mb-8">LYRA SAT</div>
-                    <div className="space-y-2">
-                        <button 
-                            onClick={() => navigate('/home')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm"
-                        >
-                            Trang chủ
-                        </button>
-                        <button 
-                            onClick={() => navigate('/mission')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl bg-pink-500 text-white font-bold transition text-sm shadow-md shadow-pink-500/20"
-                        >
-                            Nhiệm vụ
-                        </button>
-                        <button 
-                            onClick={() => navigate('/score')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm"
-                        >
-                            Điểm số
-                        </button>
-                        <button 
-                            onClick={() => navigate('/vocab')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm"
-                        >
-                            Từ vựng 
-                        </button>
-                        <button 
-                            onClick={() => navigate('/account')} 
-                            className="w-full text-left px-4 py-3 rounded-2xl text-slate-500 hover:bg-pink-50 hover:text-pink-600 font-semibold transition text-sm"
-                        >
-                            Hồ sơ
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <button 
-                        onClick={() => { localStorage.clear(); navigate('/'); }}
-                        className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold rounded-2xl transition"
-                    >
-                        Đăng xuất
-                    </button>
-                </div>
-            </div>
+            <StudentSidebar />
 
             {/* Nội dung chính bên phải */}
             <div className="flex-1 p-8 overflow-y-auto">
@@ -128,7 +99,10 @@ export default function Mission() {
                     {['Làm gấp', 'Đang làm', 'Hết hạn'].map(tab => (
                         <button
                             key={tab}
-                            onClick={() => setActiveTab(tab)}
+                            onClick={() => {
+                                setActiveTab(tab);
+                                setPage(1);
+                            }}
                             className={`relative pb-3 transition ${activeTab === tab ? 'text-pink-600 font-bold' : 'text-slate-400 hover:text-slate-600'}`}
                         >
                             {tab}
@@ -141,12 +115,20 @@ export default function Mission() {
 
                 {/* Grid bài tập dạng 2 cột */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {filteredTests.length === 0 ? (
+                    {isLoading ? (
+                        <div className="col-span-2 text-center py-12 text-pink-600 text-sm bg-white rounded-3xl border border-pink-100 shadow-sm">
+                            Đang tải nhiệm vụ...
+                        </div>
+                    ) : loadError ? (
+                        <div role="alert" className="col-span-2 text-center py-12 text-rose-500 text-sm bg-white rounded-3xl border border-rose-100 shadow-sm">
+                            {loadError}
+                        </div>
+                    ) : displayTests.length === 0 ? (
                         <div className="col-span-2 text-center py-12 text-slate-400 text-sm bg-white rounded-3xl border border-pink-100 shadow-sm">
                             Không có nhiệm vụ nào trong mục "{activeTab}".
                         </div>
                     ) : (
-                        filteredTests.map(test => (
+                        displayTests.map(test => (
                             <div 
                                 key={test.id} 
                                 onClick={() => navigate(`/test/${test.id}`)}
@@ -173,6 +155,14 @@ export default function Mission() {
                         ))
                     )}
                 </div>
+                {!isLoading && (
+                    <Pagination
+                        page={page}
+                        pageSize={PAGE_SIZE}
+                        totalCount={totalCount}
+                        onPageChange={setPage}
+                    />
+                )}
             </div>
         </div>
     );

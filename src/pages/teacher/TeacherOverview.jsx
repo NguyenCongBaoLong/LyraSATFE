@@ -1,48 +1,102 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import api from '../../api';
+import Pagination from '../../components/Pagination';
+
+const TEST_PAGE_SIZE = 6;
+const SUBMISSION_PAGE_SIZE = 8;
 
 export default function TeacherOverview() {
     const { selectedClass } = useOutletContext();
     const navigate = useNavigate();
 
     const [tests, setTests] = useState([]);
-    const [students, setStudents] = useState([]);
+    const [studentCount, setStudentCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
+    const [overviewError, setOverviewError] = useState('');
+    const [testPage, setTestPage] = useState(1);
+    const [testCount, setTestCount] = useState(0);
 
     const [selectedTest, setSelectedTest] = useState(null);
     const [testSubmissions, setTestSubmissions] = useState([]);
     const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+    const [submissionPage, setSubmissionPage] = useState(1);
+    const [submissionCount, setSubmissionCount] = useState(0);
+    const [submissionError, setSubmissionError] = useState('');
 
     useEffect(() => {
-        if (!selectedClass) return;
+        if (!selectedClass) {
+            setIsLoading(false);
+            setTests([]);
+            setTestCount(0);
+            setStudentCount(0);
+            return;
+        }
+
         setIsLoading(true);
+        setOverviewError('');
+        const controller = new AbortController();
 
         Promise.all([
-            api.get(`/tests/class/${selectedClass}`),
-            api.get(`/tests/class/${selectedClass}/students`)
+            api.get(`/tests/class/${selectedClass}`, {
+                params: { page: testPage, pageSize: TEST_PAGE_SIZE },
+                signal: controller.signal
+            }),
+            api.get(`/tests/class/${selectedClass}/students`, {
+                params: { page: 1, pageSize: 1 },
+                signal: controller.signal
+            })
         ])
         .then(([testsRes, studentsRes]) => {
-            setTests(testsRes.data);
-            setStudents(studentsRes.data);
+            setTests(testsRes.data.items);
+            setTestCount(testsRes.data.totalCount);
+            setTestPage(testsRes.data.page);
+            setStudentCount(studentsRes.data.totalCount);
         })
-        .catch(err => console.error("Lỗi tải dữ liệu tổng quan lớp:", err))
-        .finally(() => setIsLoading(false));
+        .catch(err => {
+            if (err.code === 'ERR_CANCELED') return;
+            console.error("Lỗi tải dữ liệu tổng quan lớp:", err);
+            setOverviewError('Không thể tải dữ liệu tổng quan lớp. Vui lòng thử lại.');
+        })
+        .finally(() => {
+            if (!controller.signal.aborted) setIsLoading(false);
+        });
 
-    }, [selectedClass]);
+        return () => {
+            controller.abort();
+        };
+    }, [selectedClass, testPage]);
 
-    const handleViewTestDetail = async (test) => {
-        setSelectedTest(test);
+    useEffect(() => {
+        if (!selectedTest) return;
+
+        setSubmissionError('');
+        const controller = new AbortController();
+        api.get(`/tests/${selectedTest.id}/submissions`, {
+            params: { page: submissionPage, pageSize: SUBMISSION_PAGE_SIZE },
+            signal: controller.signal
+        }).then(res => {
+                setTestSubmissions(res.data.items);
+                setSubmissionCount(res.data.totalCount);
+                setSubmissionPage(res.data.page);
+            }).catch(err => {
+                if (err.code === 'ERR_CANCELED') return;
+                console.error("Lỗi tải chi tiết bài nộp:", err);
+                setSubmissionError('Không thể tải danh sách bài nộp. Vui lòng thử lại.');
+            }).finally(() => {
+                if (!controller.signal.aborted) setIsLoadingDetail(false);
+            });
+        return () => {
+            controller.abort();
+        };
+    }, [selectedTest, submissionPage]);
+
+    const handleViewTestDetail = (test) => {
+        setTestSubmissions([]);
+        setSubmissionCount(0);
         setIsLoadingDetail(true);
-        try {
-            const res = await api.get(`/tests/${test.id}/submissions`);
-            setTestSubmissions(res.data);
-        } catch (err) {
-            console.error("Lỗi tải chi tiết bài nộp:", err);
-            setTestSubmissions([]);
-        } finally {
-            setIsLoadingDetail(false);
-        }
+        setSubmissionPage(1);
+        setSelectedTest(test);
     };
 
     if (isLoading) {
@@ -87,18 +141,20 @@ export default function TeacherOverview() {
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-pink-100 shadow-sm">
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tổng số học viên</h3>
-                    <p className="text-2xl font-black text-pink-600 mt-2">{students.length} Học viên</p>
+                    <p className="text-2xl font-black text-pink-600 mt-2">{studentCount} Học viên</p>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border border-pink-100 shadow-sm">
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Bài test đã giao</h3>
-                    <p className="text-2xl font-black text-pink-600 mt-2">{tests.length} Bài</p>
+                    <p className="text-2xl font-black text-pink-600 mt-2">{testCount} Bài</p>
                 </div>
             </div>
 
             {/* Danh sách bài test */}
             <div className="bg-white p-6 rounded-3xl border border-pink-100 shadow-sm">
                 <h3 className="text-sm font-extrabold text-pink-900 mb-4 uppercase tracking-wider">Danh sách bài test đã giao (Bấm vào bài để xem chi tiết)</h3>
-                {tests.length === 0 ? (
+                {overviewError ? (
+                    <p role="alert" className="text-xs text-rose-500 py-4 text-center">{overviewError}</p>
+                ) : tests.length === 0 ? (
                     <p className="text-xs text-slate-400 py-4 text-center">Chưa có bài test nào được giao cho lớp này.</p>
                 ) : (
                     <div className="space-y-3">
@@ -122,6 +178,14 @@ export default function TeacherOverview() {
                         ))}
                     </div>
                 )}
+                {!overviewError && (
+                    <Pagination
+                        page={testPage}
+                        pageSize={TEST_PAGE_SIZE}
+                        totalCount={testCount}
+                        onPageChange={setTestPage}
+                    />
+                )}
             </div>
 
             {/* Modal Chi tiết Bài làm Học sinh */}
@@ -144,12 +208,16 @@ export default function TeacherOverview() {
 
                         {isLoadingDetail ? (
                             <div className="py-12 text-center text-xs font-bold text-pink-600">Đang tải danh sách bài nộp...</div>
+                        ) : submissionError ? (
+                            <div role="alert" className="py-12 text-center text-xs text-rose-500">{submissionError}</div>
                         ) : testSubmissions.length === 0 ? (
-                            <div className="py-12 text-center text-xs text-slate-400">Chưa có học sinh nào nộp bài cho bài test này.</div>
+                            <div className="py-12 text-center text-xs text-slate-400">
+                                Chưa có học sinh nào nộp bài cho bài test này.
+                            </div>
                         ) : (
                             <div className="space-y-3">
-                                {testSubmissions.map((sub, index) => (
-                                    <div key={index} className="p-4 rounded-2xl bg-pink-50/50 border border-pink-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                {testSubmissions.map(sub => (
+                                    <div key={sub.id} className="p-4 rounded-2xl bg-pink-50/50 border border-pink-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 font-bold flex items-center justify-center text-sm shadow-inner">
                                                 {sub.studentName ? sub.studentName.charAt(0).toUpperCase() : 'HS'}
@@ -175,6 +243,18 @@ export default function TeacherOverview() {
                                     </div>
                                 ))}
                             </div>
+                        )}
+                        {!isLoadingDetail && !submissionError && (
+                            <Pagination
+                                page={submissionPage}
+                                pageSize={SUBMISSION_PAGE_SIZE}
+                                totalCount={submissionCount}
+                                onPageChange={nextPage => {
+                                    setIsLoadingDetail(true);
+                                    setTestSubmissions([]);
+                                    setSubmissionPage(nextPage);
+                                }}
+                            />
                         )}
 
                         <div className="mt-8 pt-4 border-t border-pink-100 text-right">
