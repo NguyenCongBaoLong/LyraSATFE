@@ -71,12 +71,7 @@ export default function ScoreHistory() {
 
     return (
         <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex font-sans relative">
-            <StudentSidebar
-                footer={(
-                    <div className="bg-pink-50/60 p-4 rounded-3xl border border-pink-100 text-center">
-                    </div>
-                )}
-            />
+            <StudentSidebar />
 
             {/* Content Chính */}
             <div className="flex-1 p-8 overflow-y-auto">

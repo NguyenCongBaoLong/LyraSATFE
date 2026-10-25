@@ -5,7 +5,6 @@ import StudentSidebar from '../components/StudentSidebar';
 // Import các ảnh banner và mascot từ thư mục assets của bạn
 import banner1 from '../assets/banner1-optimized.jpg';
 import banner2 from '../assets/banner2-optimized.jpg';
-import foxMascot from '../assets/fox-mascot-optimized.png';
 
 export default function Home() {
     const [user, setUser] = useState(null);
@@ -71,23 +70,7 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex font-sans">
-            <StudentSidebar
-                footer={(
-                    <div className="flex flex-col items-center my-2 relative">
-                        <div className="bg-pink-100 border border-pink-200 px-4 py-2 rounded-2xl text-pink-900 text-xs font-bold shadow-sm mb-2 relative animate-bounce whitespace-nowrap">
-                            Cố lên bạn nhé! ✨
-                        </div>
-                        <img
-                            src={foxMascot}
-                            alt="Fox Mascot"
-                            className="w-40 h-40 object-contain drop-shadow-md"
-                            onError={(e) => {
-                                e.target.style.display = 'none';
-                            }}
-                        />
-                    </div>
-                )}
-            />
+            <StudentSidebar />
 
             {/* Nội dung chính bên phải */}
             <div className="flex-1 p-8 overflow-y-auto">
