@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api';
 import LogoutButton from '../../components/LogoutButton';
+import NotificationBell from '../../components/NotificationBell';
 
 export default function TeacherLayout() {
     const navigate = useNavigate();
@@ -40,7 +41,10 @@ export default function TeacherLayout() {
             {/* Sidebar Cố định */}
             <div className="w-72 bg-white border-r border-pink-100 p-6 flex flex-col justify-between hidden md:flex shadow-sm">
                 <div>
-                    <div className="text-xl font-black text-pink-600 tracking-wider mb-6">LYRA SAT (Teacher)</div>
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="text-xl font-black text-pink-600 tracking-wider">LYRA SAT</div>
+                        <NotificationBell />
+                    </div>
                     
                     {/* Dropdown chọn lớp học */}
                     <div className="mb-6 bg-pink-50/60 p-4 rounded-2xl border border-pink-100">
@@ -98,12 +102,8 @@ export default function TeacherLayout() {
             </div>
 
             {/* Nội dung thay đổi linh hoạt theo URL */}
-            <div className="flex-1 p-8 overflow-y-auto">
-                <div className="flex justify-between items-center mb-4 md:hidden">
-                    <span className="text-sm font-black text-pink-600">LYRA SAT (Teacher)</span>
-                    <LogoutButton className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold rounded-2xl transition cursor-pointer" />
-                </div>
-                <Outlet context={{ selectedClass }} />
+            <div className="flex-1 overflow-y-auto">
+                <Outlet />
             </div>
         </div>
     );

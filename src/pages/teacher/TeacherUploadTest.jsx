@@ -11,6 +11,7 @@ export default function TeacherUploadTest() {
     const [testType, setTestType] = useState('PracticeTest');
     const [deadline, setDeadline] = useState('');
     const [maxAttempts, setMaxAttempts] = useState(''); // Để trống = Vô hạn
+    const [videoExplanationUrl, setVideoExplanationUrl] = useState('');
     const [file, setFile] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -60,6 +61,7 @@ export default function TeacherUploadTest() {
             formData.append('maxAttempts', maxAttempts);
         }
 
+        if (videoExplanationUrl) formData.append('videoExplanationUrl', videoExplanationUrl.trim());
         formData.append('file', file);
 
         try {
@@ -76,6 +78,7 @@ export default function TeacherUploadTest() {
                     setTitle('');
                     setDeadline('');
                     setMaxAttempts('');
+                    setVideoExplanationUrl('');
                     setFile(null);
                     navigate('/teacher/overview');
                 }

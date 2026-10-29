@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import { getEmbedYoutubeUrl } from '../utils/youtube';
+import TextHighlighter from '../components/TextHighlighter';
 
 export default function DoTest() {
     const { id } = useParams();
@@ -408,12 +410,12 @@ export default function DoTest() {
             )}
 
             {/* Khung chia đôi màn hình */}
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100">
+            <TextHighlighter questionId={currentQ?.id} className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100">
                 {/* Cột Trái: Đọc đoạn văn (Passage) */}
                 <div className="bg-white p-10 overflow-y-auto flex flex-col justify-center">
                     <div className="max-w-xl mx-auto">
                         <span className="text-[11px] font-bold text-pink-400 uppercase tracking-widest mb-3 block">Reading Passage</span>
-                        <p className="text-base leading-relaxed text-slate-700 font-serif whitespace-pre-line">
+                        <p className="text-base leading-relaxed text-slate-700 font-serif whitespace-pre-line select-text cursor-text">
                             {currentQ.passageText || "Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải."}
                         </p>
                     </div>
@@ -434,7 +436,7 @@ export default function DoTest() {
                             </button>
                         </div>
 
-                        <h3 className="font-bold text-sm text-slate-800 mb-6 leading-relaxed whitespace-pre-line">
+                        <h3 className="font-bold text-sm text-slate-800 mb-6 leading-relaxed whitespace-pre-line select-text cursor-text">
                             {currentQ.questionText}
                         </h3>
 
@@ -454,7 +456,7 @@ export default function DoTest() {
                                         <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs transition ${selectedAnswers[currentQ.id] === opt.key ? 'bg-pink-500 text-white border-pink-500 shadow-sm' : 'border-slate-300 text-slate-500'}`}>
                                             {opt.key}
                                         </div>
-                                        <span className="text-sm font-medium text-slate-700">{opt.text}</span>
+                                        <span className="text-sm font-medium text-slate-700 select-text cursor-text">{opt.text}</span>
                                     </div>
                                 )
                             ))}
@@ -495,7 +497,7 @@ export default function DoTest() {
                         )}
                     </div>
                 </div>
-            </div>
+            </TextHighlighter>
 
             {/* Modal */}
             {modalConfig.isOpen && (

@@ -1,12 +1,13 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import LogoutButton from './LogoutButton';
+import NotificationBell from './NotificationBell';
 import foxMascot from '../assets/fox-mascot-optimized.png';
 
 const navigationItems = [
     { path: '/home', label: 'Trang chủ' },
     { path: '/mission', label: 'Nhiệm vụ' },
-    { path: '/score', label: 'Điểm số' },
+    { path: '/score', label: 'Điểm số & Thảo luận' },
     { path: '/vocab', label: 'Từ vựng' },
     { path: '/account', label: 'Hồ sơ' }
 ];
@@ -18,7 +19,10 @@ export default function StudentSidebar({ footer, onVocabularyClick }) {
     return (
         <aside className="sticky top-0 h-screen min-h-screen w-64 shrink-0 bg-white border-r border-pink-100 p-6 flex flex-col justify-between hidden md:flex shadow-sm relative overflow-visible">
             <div>
-                <div className="text-xl font-black text-pink-600 tracking-wider mb-8">LYRA SAT</div>
+                <div className="flex items-center justify-between mb-8">
+                    <div className="text-xl font-black text-pink-600 tracking-wider">LYRA SAT</div>
+                    <NotificationBell />
+                </div>
                 <nav aria-label="Điều hướng chính" className="space-y-2">
                     {navigationItems.map(({ path, label }) => {
                         const isActive = pathname === path;

@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import api from '../api';
 import StudentSidebar from '../components/StudentSidebar';
 import Pagination from '../components/Pagination';
+import QuestionDiscussion from '../components/QuestionDiscussion';
+import NotificationBell from '../components/NotificationBell';
+import { getEmbedYoutubeUrl } from '../utils/youtube';
 
 const PAGE_SIZE = 8;
 
@@ -78,7 +81,7 @@ export default function ScoreHistory() {
                 <div className="flex flex-col md:flex-row justify-between items-center mb-8 bg-white p-5 rounded-3xl border border-pink-100 shadow-sm gap-4">
                     <div>
                         <h1 className="text-xl font-black text-pink-900">My Score & Review</h1>
-                        <p className="text-xs text-slate-400 mt-0.5">Lịch sử các bài thi và kết quả chi tiết của bạn</p>
+                        <p className="text-xs text-slate-400 mt-0.5">Lịch sử các bài thi, kết quả chi tiết và thảo luận câu hỏi</p>
                     </div>
 
                     <div className="flex items-center gap-3 w-full md:w-auto">
@@ -94,6 +97,7 @@ export default function ScoreHistory() {
                                 className="w-full bg-pink-50/50 border border-pink-200 rounded-2xl px-4 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500 transition"
                             />
                         </div>
+                        <NotificationBell />
                     </div>
                 </div>
 
@@ -135,7 +139,7 @@ export default function ScoreHistory() {
                                         onClick={() => handleOpenReview(item.id)}
                                         className="py-2.5 px-4 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold rounded-2xl transition shadow-sm flex items-center gap-1 cursor-pointer"
                                     >
-                                        Xem lại bài làm 
+                                        Xem lại bài làm & Thảo luận
                                     </button>
                                 </div>
                             </div>
@@ -146,6 +150,7 @@ export default function ScoreHistory() {
                         </div>
                     )}
                 </div>
+
                 {!isLoadingHistory && !historyError && (
                     <Pagination
                         page={page}
@@ -195,12 +200,33 @@ export default function ScoreHistory() {
                                 </p>
                             </div>
 
-                            {/* Cột Phải: Question & Các đáp án được tô màu */}
+                            {/* Cột Phải: Question & Các đáp án được tô màu + Khung thảo luận */}
                             <div className="bg-white p-10 overflow-y-auto flex flex-col justify-between">
                                 <div>
                                     <h4 className="font-bold text-sm text-slate-800 mb-6 leading-relaxed whitespace-pre-line">
                                         {currentQ.questionText}
                                     </h4>
+
+                                    {/* Video giải thích câu hỏi hoặc cả bài thi nếu có (YouTube) */}
+                                    {(currentQ.videoExplanationUrl || reviewData.videoExplanationUrl) && (
+                                        <div className="mb-6 p-4 bg-pink-50/70 border border-pink-200 rounded-2xl">
+                                            <div className="flex items-center gap-1.5 mb-2.5">
+                                                <span className="text-base">📹</span>
+                                                <span className="text-xs font-black text-pink-900">
+                                                    {currentQ.videoExplanationUrl ? 'Video giải thích câu này (YouTube)' : 'Video giải thích toàn bộ bài test (YouTube)'}
+                                                </span>
+                                            </div>
+                                            <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-xs bg-black">
+                                                <iframe
+                                                    src={getEmbedYoutubeUrl(currentQ.videoExplanationUrl || reviewData.videoExplanationUrl)}
+                                                    title="Video giải thích"
+                                                    className="w-full h-full"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowFullScreen
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Danh sách lựa chọn A, B, C, D */}
                                     <div className="space-y-3">
@@ -239,6 +265,12 @@ export default function ScoreHistory() {
                                             );
                                         })}
                                     </div>
+
+                                    {/* KHUNG THẢO LUẬN / BÌNH LUẬN DƯỚI CÂU HỎI */}
+                                    <QuestionDiscussion 
+                                        questionId={currentQ.id} 
+                                        testTitle={reviewData.testTitle} 
+                                    />
                                 </div>
 
                                 {/* Footer điều hướng trong Modal */}
