@@ -310,6 +310,32 @@ export default function DoTest() {
                         </div>
                     </div>
                 </div>
+
+                {/* Video giải thích cho cả bài test sau khi làm xong */}
+                {testData.videoExplanationUrl && (
+                    <div className="bg-white rounded-3xl p-6 md:p-8 max-w-3xl w-full shadow-xl border border-pink-100 mt-6 animate-fadeIn">
+                        <div className="flex items-center gap-2.5 mb-4">
+                            <span className="text-2xl">📹</span>
+                            <div>
+                                <h3 className="text-sm md:text-base font-black text-slate-800">
+                                    Video chữa đề & giải thích chi tiết
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    Giáo viên hướng dẫn phương pháp giải và phân tích các câu hỏi trong đề
+                                </p>
+                            </div>
+                        </div>
+                        <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-md bg-black border border-pink-200">
+                            <iframe
+                                src={getEmbedYoutubeUrl(testData.videoExplanationUrl)}
+                                title="Video giải thích bài test"
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
