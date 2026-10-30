@@ -20,6 +20,7 @@ export default function ScoreHistory() {
     // State quản lý Modal xem lại bài làm (Review)
     const [reviewData, setReviewData] = useState(null);
     const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+    const [isViewingVideo, setIsViewingVideo] = useState(false);
     const [isLoadingReview, setIsLoadingReview] = useState(false);
 
     const user = JSON.parse(localStorage.getItem('user')) || {};
@@ -56,12 +57,13 @@ export default function ScoreHistory() {
     }, [debouncedSearchTerm, page, user.id]);
 
     // Gọi API lấy thông tin chi tiết bài nộp để xem lại
-    const handleOpenReview = async (submissionId) => {
+    const handleOpenReview = async (submissionId, openVideoDirectly = false) => {
         setIsLoadingReview(true);
         try {
             const res = await api.get(`/submissions/${submissionId}/review`);
             setReviewData(res.data);
             setCurrentReviewIndex(0);
+            setIsViewingVideo(openVideoDirectly);
         } catch (err) {
             console.error("Lỗi tải chi tiết bài làm:", err);
             alert("Không thể tải chi tiết bài làm!");
@@ -87,8 +89,8 @@ export default function ScoreHistory() {
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <div className="relative flex-1 md:w-72">
                             <input 
-                                type="text"
-                                placeholder="Search enter your keyword..."
+                                type="text" 
+                                placeholder="Search enter your keyword..." 
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value);
@@ -134,9 +136,19 @@ export default function ScoreHistory() {
                                     </p>
                                 </div>
 
-                                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                                <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap">
+                                    {item.videoExplanationUrl && (
+                                        <button 
+                                            onClick={() => handleOpenReview(item.id, true)}
+                                            className="py-2.5 px-4 bg-white hover:bg-pink-50 text-pink-600 border border-pink-200 text-xs font-bold rounded-2xl transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                                            title="Xem video chữa đề thi này ở cuối bài"
+                                        >
+                                            <span>📹</span>
+                                            <span>Video chữa bài</span>
+                                        </button>
+                                    )}
                                     <button 
-                                        onClick={() => handleOpenReview(item.id)}
+                                        onClick={() => handleOpenReview(item.id, false)}
                                         className="py-2.5 px-4 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold rounded-2xl transition shadow-sm flex items-center gap-1 cursor-pointer"
                                     >
                                         Xem lại bài làm & Thảo luận
@@ -170,129 +182,244 @@ export default function ScoreHistory() {
             )}
 
             {/* --- MODAL REVIEW BÀI LÀM (MỞ RỘNG TỐI ĐA CHIỀU RỘNG VÀ CAO) --- */}
-            {reviewData && currentQ && (
+            {reviewData && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fadeIn">
                     <div className="bg-white w-[96vw] max-w-[96vw] h-[92vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-pink-100">
                         
                         {/* Header Modal */}
-                        <div className="bg-pink-50 border-b border-pink-100 px-6 py-4 flex justify-between items-center">
-                            <div>
-                                <span className="text-xs font-bold text-pink-600 block">
-                                    Câu {currentReviewIndex + 1} của {reviewData.questions.length}
-                                </span>
-                                <h3 className="text-sm font-extrabold text-slate-800">{reviewData.testTitle}</h3>
+                        <div className="bg-pink-50 border-b border-pink-100 px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                            <div className="flex items-center gap-3">
+                                <div>
+                                    <span className="text-xs font-bold text-pink-600 block">
+                                        {isViewingVideo ? '🎬 Cuối bài - Video chữa đề & Tổng kết' : `Câu ${currentReviewIndex + 1} của ${reviewData.questions.length}`}
+                                    </span>
+                                    <h3 className="text-sm font-extrabold text-slate-800">{reviewData.testTitle}</h3>
+                                </div>
                             </div>
+
+                            {/* Danh sách nhanh các câu hỏi + Tab Video Cuối bài */}
+                            <div className="flex items-center gap-1.5 overflow-x-auto max-w-full md:max-w-md py-1">
+                                {reviewData.questions.map((q, idx) => (
+                                    <button
+                                        key={q.id}
+                                        onClick={() => {
+                                            setIsViewingVideo(false);
+                                            setCurrentReviewIndex(idx);
+                                        }}
+                                        className={`w-7 h-7 rounded-xl text-xs font-bold transition flex items-center justify-center cursor-pointer flex-shrink-0 ${
+                                            !isViewingVideo && currentReviewIndex === idx
+                                                ? 'bg-pink-600 text-white shadow-sm ring-2 ring-pink-400'
+                                                : q.isCorrect
+                                                    ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                                    : 'bg-rose-100 text-rose-700 hover:bg-rose-200'
+                                        }`}
+                                        title={`Câu ${idx + 1}: ${q.isCorrect ? 'Đúng' : 'Sai'}`}
+                                    >
+                                        {idx + 1}
+                                    </button>
+                                ))}
+
+                                {reviewData.videoExplanationUrl && (
+                                    <button
+                                        onClick={() => setIsViewingVideo(true)}
+                                        className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer flex-shrink-0 whitespace-nowrap ${
+                                            isViewingVideo
+                                                ? 'bg-pink-600 text-white shadow-sm ring-2 ring-pink-400'
+                                                : 'bg-pink-100 hover:bg-pink-200 text-pink-700'
+                                        }`}
+                                        title="Xem video chữa toàn bộ đề thi (ở cuối bài)"
+                                    >
+                                        <span>📹</span>
+                                        <span>Video cuối bài</span>
+                                    </button>
+                                )}
+                            </div>
+
                             <button 
                                 onClick={() => setReviewData(null)}
-                                className="w-8 h-8 rounded-full bg-white border border-pink-200 text-slate-500 font-bold flex items-center justify-center hover:bg-pink-100 transition cursor-pointer"
+                                className="w-8 h-8 rounded-full bg-white border border-pink-200 text-slate-500 font-bold flex items-center justify-center hover:bg-pink-100 transition cursor-pointer self-end md:self-auto"
                             >
                                 ✕
                             </button>
                         </div>
 
-                        {/* Nội dung câu hỏi (Chia đôi màn hình rộng rãi) */}
-                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100 overflow-hidden">
-                            {/* Cột Trái: Passage */}
-                            <div className="bg-white p-10 overflow-y-auto">
-                                <span className="text-[11px] font-bold text-pink-400 uppercase tracking-widest mb-3 block">Reading Passage</span>
-                                <p className="text-sm leading-relaxed text-slate-700 font-serif whitespace-pre-line">
-                                    {currentQ.passageText || "Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải."}
-                                </p>
-                            </div>
-
-                            {/* Cột Phải: Question & Các đáp án được tô màu + Khung thảo luận */}
-                            <div className="bg-white p-10 overflow-y-auto flex flex-col justify-between">
-                                <div>
-                                    <h4 className="font-bold text-sm text-slate-800 mb-6 leading-relaxed whitespace-pre-line">
-                                        {currentQ.questionText}
-                                    </h4>
-
-                                    {/* Video giải thích câu hỏi hoặc cả bài thi nếu có (YouTube) */}
-                                    {(currentQ.videoExplanationUrl || reviewData.videoExplanationUrl) && (
-                                        <div className="mb-6 p-4 bg-pink-50/70 border border-pink-200 rounded-2xl">
-                                            <div className="flex items-center gap-1.5 mb-2.5">
-                                                <span className="text-base">📹</span>
-                                                <span className="text-xs font-black text-pink-900">
-                                                    {currentQ.videoExplanationUrl ? 'Video giải thích câu này (YouTube)' : 'Video giải thích toàn bộ bài test (YouTube)'}
-                                                </span>
+                        {/* Thân Modal: Xem Video Cuối Bài HOẶC Xem từng câu hỏi */}
+                        {isViewingVideo ? (
+                            <div className="flex-1 bg-white p-6 md:p-10 overflow-y-auto flex flex-col items-center">
+                                <div className="max-w-4xl w-full space-y-6 animate-fadeIn">
+                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-pink-50/70 p-6 rounded-3xl border border-pink-200">
+                                        <div>
+                                            <span className="text-xs font-bold text-pink-600 uppercase tracking-widest block mb-1">
+                                                🎬 Video chữa đề & Hướng dẫn giải chi tiết (Cuối bài)
+                                            </span>
+                                            <h2 className="text-lg md:text-xl font-black text-slate-800">{reviewData.testTitle}</h2>
+                                            <p className="text-xs text-slate-500 mt-1">
+                                                Giáo viên phân tích phương pháp tư duy và chữa chi tiết toàn bộ các câu hỏi trong đề thi.
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-pink-200 shadow-sm flex-shrink-0">
+                                            <div className="text-center">
+                                                <span className="text-[10px] uppercase font-bold text-slate-400 block">Điểm số</span>
+                                                <span className="text-lg font-black text-pink-600">{reviewData.score}%</span>
                                             </div>
-                                            <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-xs bg-black">
-                                                <iframe
-                                                    src={getEmbedYoutubeUrl(currentQ.videoExplanationUrl || reviewData.videoExplanationUrl)}
-                                                    title="Video giải thích"
-                                                    className="w-full h-full"
-                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                    allowFullScreen
-                                                />
+                                            <div className="h-8 w-px bg-pink-100"></div>
+                                            <div className="text-center">
+                                                <span className="text-[10px] uppercase font-bold text-slate-400 block">Số câu đúng</span>
+                                                <span className="text-lg font-black text-emerald-600">{reviewData.correctCount}/{reviewData.totalQuestions}</span>
                                             </div>
                                         </div>
-                                    )}
-
-                                    {/* Danh sách lựa chọn A, B, C, D */}
-                                    <div className="space-y-3">
-                                        {[
-                                            { key: 'A', text: currentQ.optionA },
-                                            { key: 'B', text: currentQ.optionB },
-                                            { key: 'C', text: currentQ.optionC },
-                                            { key: 'D', text: currentQ.optionD }
-                                        ].map(opt => {
-                                            if (!opt.text) return null;
-
-                                            const isCorrectAns = opt.key.toUpperCase() === currentQ.correctAnswer.toUpperCase();
-                                            const isUserSelected = opt.key.toUpperCase() === currentQ.selectedAnswer.toUpperCase();
-
-                                            let containerStyle = "border-slate-200 bg-white text-slate-700";
-                                            let badgeStyle = "border-slate-300 text-slate-500";
-
-                                            if (isCorrectAns) {
-                                                containerStyle = "border-emerald-500 bg-emerald-500 text-white font-semibold shadow-md";
-                                                badgeStyle = "bg-white text-emerald-600 border-white";
-                                            } else if (isUserSelected && !isCorrectAns) {
-                                                containerStyle = "border-rose-500 bg-rose-500 text-white font-semibold shadow-md";
-                                                badgeStyle = "bg-white text-rose-600 border-white";
-                                            }
-
-                                            return (
-                                                <div 
-                                                    key={opt.key}
-                                                    className={`flex items-center gap-4 p-4 rounded-2xl border transition ${containerStyle}`}
-                                                >
-                                                    <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs ${badgeStyle}`}>
-                                                        {opt.key}
-                                                    </div>
-                                                    <span className="text-sm leading-relaxed">{opt.text}</span>
-                                                </div>
-                                            );
-                                        })}
                                     </div>
 
-                                    {/* KHUNG THẢO LUẬN / BÌNH LUẬN DƯỚI CÂU HỎI */}
-                                    <QuestionDiscussion 
-                                        questionId={currentQ.id} 
-                                        testTitle={reviewData.testTitle} 
-                                    />
-                                </div>
+                                    {/* Video YouTube Embed sắc nét */}
+                                    <div className="relative aspect-video w-full rounded-3xl overflow-hidden shadow-xl bg-black border-2 border-pink-200">
+                                        <iframe
+                                            src={getEmbedYoutubeUrl(reviewData.videoExplanationUrl)}
+                                            title="Video chữa đề thi ở cuối bài"
+                                            className="w-full h-full"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowFullScreen
+                                        />
+                                    </div>
 
-                                {/* Footer điều hướng trong Modal */}
-                                <div className="flex justify-between items-center mt-8 pt-4 border-t border-pink-100">
-                                    <button
-                                        disabled={currentReviewIndex === 0}
-                                        onClick={() => setCurrentReviewIndex(prev => prev - 1)}
-                                        className={`px-5 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer ${currentReviewIndex === 0 ? 'opacity-40 cursor-not-allowed border-slate-200' : 'border-slate-200 hover:bg-pink-50'}`}
-                                    >
-                                        ‹ Câu trước
-                                    </button>
-
-                                    <button
-                                        disabled={currentReviewIndex === reviewData.questions.length - 1}
-                                        onClick={() => setCurrentReviewIndex(prev => prev + 1)}
-                                        className={`px-5 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer ${currentReviewIndex === reviewData.questions.length - 1 ? 'opacity-40 cursor-not-allowed border-slate-200' : 'bg-pink-600 text-white border-pink-600 hover:bg-pink-700'}`}
-                                    >
-                                        Câu tiếp ›
-                                    </button>
+                                    <div className="flex justify-between items-center pt-4 border-t border-pink-100">
+                                        <button
+                                            onClick={() => {
+                                                setIsViewingVideo(false);
+                                                setCurrentReviewIndex(reviewData.questions.length - 1);
+                                            }}
+                                            className="px-6 py-2.5 rounded-2xl border border-slate-200 hover:bg-pink-50 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                            ‹ Quay lại câu {reviewData.questions.length}
+                                        </button>
+                                        <button
+                                            onClick={() => setReviewData(null)}
+                                            className="px-6 py-2.5 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold shadow-md shadow-pink-600/20 transition cursor-pointer"
+                                        >
+                                            Hoàn tất & Đóng
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ) : currentQ ? (
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100 overflow-hidden">
+                                {/* Cột Trái: Passage */}
+                                <div className="bg-white p-10 overflow-y-auto">
+                                    <span className="text-[11px] font-bold text-pink-400 uppercase tracking-widest mb-3 block">Reading Passage</span>
+                                    <p className="text-sm leading-relaxed text-slate-700 font-serif whitespace-pre-line">
+                                        {currentQ.passageText || "Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải."}
+                                    </p>
+                                </div>
+
+                                {/* Cột Phải: Question & Các đáp án được tô màu + Khung thảo luận */}
+                                <div className="bg-white p-10 overflow-y-auto flex flex-col justify-between">
+                                    <div>
+                                        <h4 className="font-bold text-sm text-slate-800 mb-6 leading-relaxed whitespace-pre-line">
+                                            {currentQ.questionText}
+                                        </h4>
+
+                                        {/* Video giải thích riêng cho câu hỏi này (nếu có) */}
+                                        {currentQ.videoExplanationUrl && (
+                                            <div className="mb-6 p-4 bg-pink-50/70 border border-pink-200 rounded-2xl">
+                                                <div className="flex items-center gap-1.5 mb-2.5">
+                                                    <span className="text-base">📹</span>
+                                                    <span className="text-xs font-black text-pink-900">
+                                                        Video giải thích riêng câu này (YouTube)
+                                                    </span>
+                                                </div>
+                                                <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-xs bg-black">
+                                                    <iframe
+                                                        src={getEmbedYoutubeUrl(currentQ.videoExplanationUrl)}
+                                                        title="Video giải thích câu hỏi"
+                                                        className="w-full h-full"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                        allowFullScreen
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Danh sách lựa chọn A, B, C, D */}
+                                        <div className="space-y-3">
+                                            {[
+                                                { key: 'A', text: currentQ.optionA },
+                                                { key: 'B', text: currentQ.optionB },
+                                                { key: 'C', text: currentQ.optionC },
+                                                { key: 'D', text: currentQ.optionD }
+                                            ].map(opt => {
+                                                if (!opt.text) return null;
+
+                                                const isCorrectAns = opt.key.toUpperCase() === currentQ.correctAnswer.toUpperCase();
+                                                const isUserSelected = opt.key.toUpperCase() === currentQ.selectedAnswer.toUpperCase();
+
+                                                let containerStyle = "border-slate-200 bg-white text-slate-700";
+                                                let badgeStyle = "border-slate-300 text-slate-500";
+
+                                                if (isCorrectAns) {
+                                                    containerStyle = "border-emerald-500 bg-emerald-500 text-white font-semibold shadow-md";
+                                                    badgeStyle = "bg-white text-emerald-600 border-white";
+                                                } else if (isUserSelected && !isCorrectAns) {
+                                                    containerStyle = "border-rose-500 bg-rose-500 text-white font-semibold shadow-md";
+                                                    badgeStyle = "bg-white text-rose-600 border-white";
+                                                }
+
+                                                return (
+                                                    <div 
+                                                        key={opt.key}
+                                                        className={`flex items-center gap-4 p-4 rounded-2xl border transition ${containerStyle}`}
+                                                    >
+                                                        <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs ${badgeStyle}`}>
+                                                            {opt.key}
+                                                        </div>
+                                                        <span className="text-sm leading-relaxed">{opt.text}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* KHUNG THẢO LUẬN / BÌNH LUẬN DƯỚI CÂU HỎI */}
+                                        <QuestionDiscussion 
+                                            questionId={currentQ.id} 
+                                            testTitle={reviewData.testTitle} 
+                                        />
+                                    </div>
+
+                                    {/* Footer điều hướng trong Modal */}
+                                    <div className="flex justify-between items-center mt-8 pt-4 border-t border-pink-100">
+                                        <button
+                                            disabled={currentReviewIndex === 0}
+                                            onClick={() => setCurrentReviewIndex(prev => prev - 1)}
+                                            className={`px-5 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer ${currentReviewIndex === 0 ? 'opacity-40 cursor-not-allowed border-slate-200' : 'border-slate-200 hover:bg-pink-50'}`}
+                                        >
+                                            ‹ Câu trước
+                                        </button>
+
+                                        {currentReviewIndex < reviewData.questions.length - 1 ? (
+                                            <button
+                                                onClick={() => setCurrentReviewIndex(prev => prev + 1)}
+                                                className="px-5 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer bg-pink-600 text-white border-pink-600 hover:bg-pink-700"
+                                            >
+                                                Câu tiếp ›
+                                            </button>
+                                        ) : reviewData.videoExplanationUrl ? (
+                                            <button
+                                                onClick={() => setIsViewingVideo(true)}
+                                                className="px-5 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-md shadow-pink-500/20 hover:opacity-95 flex items-center gap-1.5"
+                                            >
+                                                <span>Xem video chữa đề (Cuối bài)</span>
+                                                <span>📹 ›</span>
+                                            </button>
+                                        ) : (
+                                            <button
+                                                disabled
+                                                className="px-5 py-2 rounded-2xl text-xs font-bold border transition border-slate-200 opacity-40 cursor-not-allowed"
+                                            >
+                                                Hết bài thi
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             )}

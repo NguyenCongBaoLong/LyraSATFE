@@ -153,6 +153,22 @@ export default function TeacherUploadTest() {
                 </div>
 
                 <div>
+                    <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                        Link Video YouTube chữa đề & giải thích chi tiết (ở cuối bài test)
+                    </label>
+                    <input 
+                        type="url"
+                        placeholder="Ví dụ: https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+                        value={videoExplanationUrl}
+                        onChange={(e) => setVideoExplanationUrl(e.target.value)}
+                        className="w-full px-4 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                        Học sinh sẽ xem được video này ở cuối bài sau khi hoàn thành hoặc nộp bài test.
+                    </p>
+                </div>
+
+                <div>
                     <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Tải lên file câu hỏi (.docx Word)</label>
                     <input 
                         type="file" 

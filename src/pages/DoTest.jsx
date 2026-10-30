@@ -239,19 +239,48 @@ export default function DoTest() {
 
     if (!allowed) {
         return (
-            <div className="min-h-screen bg-[#FFF5F7] flex items-center justify-center p-6 font-sans">
-                <div className="bg-white p-8 rounded-3xl border border-pink-100 shadow-xl text-center max-w-md">
-                    <div className="text-5xl mb-4">🚫</div>
-                    <h2 className="text-lg font-black text-pink-900 mb-2">Đã hết lượt làm bài</h2>
+            <div className="min-h-screen bg-[#FFF5F7] flex flex-col items-center justify-center p-6 font-sans">
+                <div className="bg-white p-8 rounded-3xl border border-pink-100 shadow-xl text-center max-w-xl w-full">
+                    <div className="text-5xl mb-3">📝</div>
+                    <h2 className="text-lg font-black text-pink-900 mb-2">Đã hoàn thành bài test</h2>
                     <p className="text-xs text-slate-500 mb-6 leading-relaxed">
                         {attemptInfo?.message || "Bạn đã dùng hết số lần làm bài cho phép đối với bài test này."}
                     </p>
-                    <button 
-                        onClick={() => navigate('/mission')}
-                        className="px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white font-bold text-xs rounded-2xl shadow-md shadow-pink-500/20 transition cursor-pointer"
-                    >
-                        Quay lại danh sách nhiệm vụ
-                    </button>
+
+                    {attemptInfo?.videoExplanationUrl && (
+                        <div className="mb-6 p-4 bg-pink-50/70 border border-pink-200 rounded-2xl text-left">
+                            <div className="flex items-center gap-2 mb-3">
+                                <span className="text-xl">📹</span>
+                                <span className="text-xs font-black text-pink-900">
+                                    Video chữa đề & giải thích chi tiết (Cuối bài test)
+                                </span>
+                            </div>
+                            <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-xs bg-black">
+                                <iframe
+                                    src={getEmbedYoutubeUrl(attemptInfo.videoExplanationUrl)}
+                                    title="Video chữa đề thi"
+                                    className="w-full h-full"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <button 
+                            onClick={() => navigate('/score')}
+                            className="flex-1 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs rounded-2xl shadow-md shadow-pink-600/20 transition cursor-pointer"
+                        >
+                            Xem lại bài làm & Thảo luận
+                        </button>
+                        <button 
+                            onClick={() => navigate('/mission')}
+                            className="flex-1 py-3 bg-white border border-pink-200 hover:bg-pink-50 text-slate-700 font-bold text-xs rounded-2xl transition cursor-pointer"
+                        >
+                            Danh sách nhiệm vụ
+                        </button>
+                    </div>
                 </div>
             </div>
         );
