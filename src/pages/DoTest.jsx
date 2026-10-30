@@ -20,8 +20,8 @@ export default function DoTest() {
     // State quản lý việc ẩn/hiện bảng danh sách câu hỏi (Question Palette Modal hoặc Drawer)
     const [showPalette, setShowPalette] = useState(false);
 
-    const user = JSON.parse(localStorage.getItem('user')) || {};
-    const studentId = user.id || 1; // Lấy ID học sinh đang đăng nhập
+    const storedUser = JSON.parse(localStorage.getItem('user')) || {};
+    const studentId = storedUser.id ?? null; // Bắt buộc đăng nhập, không fallback về id 1
 
     // 1. Khôi phục đáp án từ sessionStorage chống mất khi F5 hoặc thoát giữa chừng
     const [selectedAnswers, setSelectedAnswers] = useState(() => {
@@ -72,6 +72,11 @@ export default function DoTest() {
 
     // Kiểm tra số lần làm bài trước khi cho phép vào thi
     useEffect(() => {
+        if (!studentId) {
+            navigate('/');
+            return;
+        }
+
         api.get(`/tests/${id}/check-attempts/${studentId}`)
             .then(res => {
                 if (!res.data.allowed) {
@@ -84,7 +89,7 @@ export default function DoTest() {
                 console.error("Lỗi kiểm tra lượt làm bài:", err);
                 setCheckingAttempt(false);
             });
-    }, [id, studentId]);
+    }, [id, navigate, studentId]);
 
     // Tự động lưu đáp án khi học sinh thao tác chọn
     useEffect(() => {
@@ -96,14 +101,15 @@ export default function DoTest() {
     }, [markedQuestions, id]);
 
     useEffect(() => {
-        if (!allowed) return;
+        if (!allowed || !studentId) return;
 
         api.get(`/tests/${id}`)
             .then(res => {
                 const totalDurationSec = (res.data.duration || 60) * 60;
                 setTestData({
                     title: res.data.title,
-                    duration: res.data.duration
+                    duration: res.data.duration,
+                    videoExplanationUrl: res.data.videoExplanationUrl || ''
                 });
 
                 const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
@@ -152,7 +158,7 @@ export default function DoTest() {
             .catch(err => {
                 console.error("Lỗi tải bài test:", err);
             });
-    }, [id, startTime, allowed]);
+    }, [id, startTime, allowed, studentId]);
 
     // Đồng hồ đếm ngược
     useEffect(() => {
@@ -169,6 +175,10 @@ export default function DoTest() {
 
     const handleConfirmSubmit = useCallback(async () => {
         if (isSubmittingRef.current) return;
+        if (!studentId) {
+            showAlert("Chưa đăng nhập", "Vui lòng đăng nhập lại để nộp bài!", () => navigate('/'));
+            return;
+        }
         isSubmittingRef.current = true;
         setIsSubmitting(true);
         closeModal();
@@ -195,7 +205,7 @@ export default function DoTest() {
             isSubmittingRef.current = false;
             setIsSubmitting(false);
         }
-    }, [closeModal, id, selectedAnswers, showAlert, startTime, studentId]);
+    }, [closeModal, id, navigate, selectedAnswers, showAlert, startTime, studentId]);
 
     useEffect(() => {
         submitHandlerRef.current = handleConfirmSubmit;
