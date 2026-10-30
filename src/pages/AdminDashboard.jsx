@@ -4,6 +4,7 @@ import api from '../api';
 // Import các component đã tách
 import CreateUserCard from '../components/admin/CreateUserCard';
 import TeacherListCard from '../components/admin/TeacherListCard';
+import StudentListCard from '../components/admin/StudentListCard';
 import CreateClassCard from '../components/admin/CreateClassCard';
 import ClassListCard from '../components/admin/ClassListCard';
 import ClassDetailModal from '../components/admin/ClassDetailModal';
@@ -25,6 +26,14 @@ export default function AdminDashboard() {
     const [classRefresh, setClassRefresh] = useState(0);
     const [hasLoadedClassOptions, setHasLoadedClassOptions] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // State Quản lý Học sinh (Tab 2)
+    const [studentPage, setStudentPage] = useState(1);
+    const [studentListing, setStudentListing] = useState({ items: [], totalCount: 0 });
+    const [studentSearch, setStudentSearch] = useState('');
+    const [studentClassFilter, setStudentClassFilter] = useState('');
+    const [studentRefresh, setStudentRefresh] = useState(0);
+    const [isLoadingStudentsTab, setIsLoadingStudentsTab] = useState(false);
 
     // Modal thông báo
     const [modal, setModal] = useState({ isOpen: false, title: '', message: '', type: 'success' });
@@ -115,6 +124,72 @@ export default function AdminDashboard() {
             controller.abort();
         };
     }, [activeTab, classPage, classRefresh]);
+
+    // Tải danh sách học sinh khi mở Tab Quản lý Học viên
+    useEffect(() => {
+        if (activeTab !== 'students') return;
+        const controller = new AbortController();
+        setIsLoadingStudentsTab(true);
+
+        // Load class options if not loaded
+        if (!hasLoadedClassOptions) {
+            loadClassOptions(controller.signal);
+        }
+
+        api.get('/admin/students', {
+            params: {
+                page: studentPage,
+                pageSize: 10,
+                search: studentSearch || undefined,
+                classCode: studentClassFilter || undefined
+            },
+            signal: controller.signal
+        })
+            .then(res => {
+                setStudentListing(res.data);
+                setStudentPage(res.data.page);
+            })
+            .catch(err => {
+                if (err.code === 'ERR_CANCELED') return;
+                console.error('Lỗi tải danh sách học viên:', err);
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setIsLoadingStudentsTab(false);
+            });
+
+        return () => controller.abort();
+    }, [activeTab, studentPage, studentSearch, studentClassFilter, studentRefresh, hasLoadedClassOptions, loadClassOptions]);
+
+    // Xử lý Khóa / Mở khóa đăng nhập tài khoản học sinh
+    const handleToggleUserStatus = async (studentId, currentIsActive, studentName) => {
+        const actionText = currentIsActive ? 'khóa quyền đăng nhập' : 'mở khóa đăng nhập';
+        if (!window.confirm(`Bạn có chắc chắn muốn ${actionText} cho học viên "${studentName}"?`)) {
+            return;
+        }
+        try {
+            const res = await api.post(`/admin/users/${studentId}/toggle-status`);
+            showAlert("Thành công! 🎉", res.data.message);
+            setStudentRefresh(prev => prev + 1);
+        } catch (err) {
+            console.error("Lỗi thay đổi trạng thái tài khoản:", err);
+            showAlert("Lỗi", err.response?.data?.message || "Không thể cập nhật trạng thái tài khoản.", "error");
+        }
+    };
+
+    // Xử lý Xóa vĩnh viễn tài khoản học sinh
+    const handleDeleteStudent = async (studentId, studentName) => {
+        if (!window.confirm(`CẢNH BÁO NGUY HIỂM:\nBạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản học viên "${studentName}" khỏi hệ thống?\nToàn bộ dữ liệu điểm số, bài nộp và bình luận của bạn này sẽ bị xóa sạch.`)) {
+            return;
+        }
+        try {
+            const res = await api.delete(`/admin/users/${studentId}`);
+            showAlert("Đã xóa! 🗑️", res.data.message);
+            setStudentRefresh(prev => prev + 1);
+        } catch (err) {
+            console.error("Lỗi xóa tài khoản học sinh:", err);
+            showAlert("Lỗi", err.response?.data?.message || "Không thể xóa tài khoản học sinh.", "error");
+        }
+    };
 
     // Xử lý tạo tài khoản
     const handleCreateUser = async (userData, resetForm) => {
@@ -248,18 +323,27 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Tabs Chức Năng */}
-                <div className="flex gap-4 mb-8">
+                <div className="flex flex-wrap gap-3 mb-8">
                     <button 
                         onClick={() => setActiveTab('users')}
-                        className={`px-6 py-3 rounded-2xl text-xs font-bold transition cursor-pointer ${activeTab === 'users' ? 'bg-pink-500 text-white shadow-md shadow-pink-500/20' : 'bg-white border border-pink-100 text-slate-600 hover:bg-pink-50'}`}
+                        className={`px-5 py-3 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-2 ${activeTab === 'users' ? 'bg-pink-500 text-white shadow-md shadow-pink-500/20' : 'bg-white border border-pink-100 text-slate-600 hover:bg-pink-50'}`}
                     >
-                         Tạo Tài Khoản
+                        <span>👤</span>
+                        <span>Tạo Tài Khoản</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('students')}
+                        className={`px-5 py-3 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-2 ${activeTab === 'students' ? 'bg-pink-500 text-white shadow-md shadow-pink-500/20' : 'bg-white border border-pink-100 text-slate-600 hover:bg-pink-50'}`}
+                    >
+                        <span>🎓</span>
+                        <span>Quản lý Học viên & Đăng nhập</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('classes')}
-                        className={`px-6 py-3 rounded-2xl text-xs font-bold transition cursor-pointer ${activeTab === 'classes' ? 'bg-pink-500 text-white shadow-md shadow-pink-500/20' : 'bg-white border border-pink-100 text-slate-600 hover:bg-pink-50'}`}
+                        className={`px-5 py-3 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-2 ${activeTab === 'classes' ? 'bg-pink-500 text-white shadow-md shadow-pink-500/20' : 'bg-white border border-pink-100 text-slate-600 hover:bg-pink-50'}`}
                     >
-                         Tạo Khóa / Lớp Học
+                        <span>🏫</span>
+                        <span>Tạo Khóa / Lớp Học</span>
                     </button>
                 </div>
 
@@ -281,7 +365,32 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                {/* TAB 2: TẠO & QUẢN LÝ LỚP HỌC */}
+                {/* TAB 2: QUẢN LÝ HỌC VIÊN & QUYỀN ĐĂNG NHẬP */}
+                {activeTab === 'students' && (
+                    <StudentListCard
+                        students={studentListing.items}
+                        page={studentPage}
+                        pageSize={10}
+                        totalCount={studentListing.totalCount}
+                        onPageChange={setStudentPage}
+                        search={studentSearch}
+                        onSearchChange={(val) => {
+                            setStudentSearch(val);
+                            setStudentPage(1);
+                        }}
+                        classFilter={studentClassFilter}
+                        onClassFilterChange={(val) => {
+                            setStudentClassFilter(val);
+                            setStudentPage(1);
+                        }}
+                        classesList={classesList}
+                        onToggleStatus={handleToggleUserStatus}
+                        onDeleteStudent={handleDeleteStudent}
+                        isLoading={isLoadingStudentsTab}
+                    />
+                )}
+
+                {/* TAB 3: TẠO & QUẢN LÝ LỚP HỌC */}
                 {activeTab === 'classes' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <CreateClassCard 
