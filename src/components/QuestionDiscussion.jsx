@@ -39,39 +39,7 @@ const formatRelativeTime = (dateInput) => {
     return `${day}/${month}/${year} ${hours}:${minutes}`;
 };
 
-// Seed comments to display gracefully if backend endpoint is not yet connected
-const getMockComments = (qId) => [
-    {
-        id: `mock-${qId}-1`,
-        questionId: qId,
-        userId: 2,
-        authorName: 'Cô Thu Hà (Lyra SAT)',
-        authorRole: 'Teacher',
-        content: 'Với câu hỏi này, các em cần chú ý sự đối lập giữa hai mệnh đề nối bởi liên từ "However". Từ khóa cần điền phải mang nghĩa tương phản với thái độ ban đầu.',
-        createdAt: new Date(Date.now() - 3600 * 1000 * 4).toISOString(),
-        isPinned: true,
-        isDeleted: false,
-        likesCount: 8,
-        isLiked: false,
-        replies: [
-            {
-                id: `mock-${qId}-2`,
-                questionId: qId,
-                userId: 10,
-                authorName: 'Minh Hoàng',
-                authorRole: 'Student',
-                content: 'Em cảm ơn cô ạ! Lúc đầu em phân vân giữa đáp án A và C nhưng đọc phân tích của cô em đã hiểu rõ hơn rồi.',
-                createdAt: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
-                isPinned: false,
-                isDeleted: false,
-                likesCount: 2,
-                isLiked: false,
-                parentId: `mock-${qId}-1`,
-                replies: []
-            }
-        ]
-    }
-];
+// Real comments are loaded from backend API
 
 export default function QuestionDiscussion({
     questionId,
@@ -165,16 +133,18 @@ export default function QuestionDiscussion({
             return;
         }
 
-        api.get(`/questions/${questionId}/comments`)
+        const userParam = currentUser?.id ? `?userId=${currentUser.id}` : '';
+        api.get(`/comments/question/${questionId}${userParam}`)
             .then(res => {
                 if (!isCurrent) return;
                 const data = Array.isArray(res.data) ? res.data : (res.data?.comments || []);
                 setComments(data);
                 setLoading(false);
             })
-            .catch(() => {
+            .catch((err) => {
                 if (!isCurrent) return;
-                setComments(getMockComments(questionId));
+                console.warn('Lỗi tải bình luận:', err);
+                setComments([]);
                 setLoading(false);
             });
 
@@ -427,7 +397,10 @@ export default function QuestionDiscussion({
         });
 
         try {
-            await api.delete(`/comments/${commentId}`);
+            const deleteUserId = currentUser?.id ?? currentUser?.userId;
+            await api.delete(`/comments/${commentId}`, {
+                params: { userId: deleteUserId }
+            });
         } catch (err) {
             console.warn('API delete comment failed:', err);
         }
@@ -707,9 +680,10 @@ export default function QuestionDiscussion({
                                         <button
                                             type="button"
                                             onClick={() => confirmDelete(comment.id, false)}
-                                            className="flex items-center gap-1 hover:text-red-600 transition cursor-pointer text-slate-400 ml-auto"
+                                            className="flex items-center gap-1 hover:text-red-700 transition cursor-pointer text-red-500 font-bold ml-auto px-2.5 py-1 rounded-xl bg-red-50 hover:bg-red-100 border border-red-200 shadow-xs"
+                                            title="Xóa bình luận này"
                                         >
-                                            <Trash2 className="w-3 h-3" />
+                                            <Trash2 className="w-3.5 h-3.5" />
                                             <span>Xóa</span>
                                         </button>
                                     )}
@@ -852,9 +826,10 @@ export default function QuestionDiscussion({
                                                         <button
                                                             type="button"
                                                             onClick={() => confirmDelete(reply.id, true, comment.id)}
-                                                            className="flex items-center gap-0.5 hover:text-red-600 transition cursor-pointer ml-auto"
+                                                            className="flex items-center gap-1 hover:text-red-700 transition cursor-pointer text-red-500 font-bold ml-auto px-2 py-0.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200"
+                                                            title="Xóa phản hồi này"
                                                         >
-                                                            <Trash2 className="w-2.5 h-2.5" />
+                                                            <Trash2 className="w-3 h-3" />
                                                             <span>Xóa</span>
                                                         </button>
                                                     )}

@@ -16,7 +16,7 @@ const formatRelativeTime = (dateStr) => {
     return `${diffDay} ngày trước`;
 };
 
-export default function NotificationBell({ className = '' }) {
+export default function NotificationBell({ className = '', align = 'right' }) {
     const [unreadCount, setUnreadCount] = useState(0);
     const [notifications, setNotifications] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
@@ -138,7 +138,7 @@ export default function NotificationBell({ className = '' }) {
 
             {/* Popover Dropdown */}
             {isOpen && (
-                <div className="absolute left-0 sm:left-auto sm:right-0 mt-3 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-pink-100 z-50 overflow-hidden animate-fadeIn">
+                <div className={`absolute ${align === "left" ? "left-0" : "right-0"} mt-3 w-80 sm:w-96 max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-2xl border border-pink-100 z-50 overflow-hidden animate-fadeIn`}>
                     <div className="p-4 bg-pink-50/70 border-b border-pink-100 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <span className="font-extrabold text-sm text-pink-900">Thông báo</span>

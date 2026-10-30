@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StudentSidebar from '../components/StudentSidebar';
+import NotificationBell from '../components/NotificationBell';
 
 // Import các ảnh banner và mascot từ thư mục assets của bạn
 import banner1 from '../assets/banner1-optimized.jpg';
@@ -80,9 +81,8 @@ export default function Home() {
                         <h1 className="text-xl font-black text-pink-900">{user.fullName}</h1>
                         <p className="text-xs text-slate-400 mt-0.5">Lớp: <span className="text-slate-700 font-semibold">{user.classCode}</span></p>
                     </div>
-                    <div className="bg-pink-50 border border-pink-200 px-4 py-2.5 rounded-2xl flex items-center gap-2 cursor-pointer hover:bg-pink-100 transition shadow-sm">
-                        <span className="text-base">🔔</span>
-                        <span className="text-xs font-bold text-pink-700">Thông báo</span>
+                    <div className="flex items-center gap-2">
+                        <NotificationBell align="right" />
                     </div>
                 </div>
 

@@ -43,7 +43,7 @@ export default function TeacherLayout() {
                 <div>
                     <div className="flex items-center justify-between mb-6">
                         <div className="text-xl font-black text-pink-600 tracking-wider">LYRA SAT</div>
-                        <NotificationBell />
+                        <NotificationBell align="left" />
                     </div>
                     
                     {/* Dropdown chọn lớp học */}

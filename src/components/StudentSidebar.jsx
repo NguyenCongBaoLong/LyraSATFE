@@ -21,7 +21,7 @@ export default function StudentSidebar({ footer, onVocabularyClick }) {
             <div>
                 <div className="flex items-center justify-between mb-8">
                     <div className="text-xl font-black text-pink-600 tracking-wider">LYRA SAT</div>
-                    <NotificationBell />
+                    <NotificationBell align="left" />
                 </div>
                 <nav aria-label="Điều hướng chính" className="space-y-2">
                     {navigationItems.map(({ path, label }) => {
