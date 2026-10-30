@@ -474,95 +474,125 @@ export default function DoTest() {
                 </div>
             )}
 
-            {/* Khung chia đôi màn hình */}
-            <TextHighlighter questionId={currentQ?.id} className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100">
-                {/* Cột Trái: Đọc đoạn văn (Passage) */}
-                <div className="bg-white p-10 overflow-y-auto flex flex-col justify-center">
-                    <div className="max-w-xl mx-auto">
-                        <span className="text-[11px] font-bold text-pink-400 uppercase tracking-widest mb-3 block">Reading Passage</span>
-                        <p className="text-base leading-relaxed text-slate-700 font-serif whitespace-pre-line select-text cursor-text">
-                            {currentQ.passageText || "Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải."}
-                        </p>
-                    </div>
-                </div>
-
-                {/* Cột Phải: Câu hỏi và các lựa chọn đáp án */}
-                <div className="bg-white p-10 overflow-y-auto flex flex-col justify-between">
-                    <div>
-                        <div className="flex justify-between items-center mb-6 bg-pink-50 border border-pink-200 px-4 py-2.5 rounded-2xl">
-                            <span className="text-xs font-bold text-pink-800">
-                                Question {currentIndex + 1} of {questions.length}
-                            </span>
-                            <button 
-                                onClick={toggleMarkReview}
-                                className={`text-xs font-semibold px-3 py-1 rounded-xl transition cursor-pointer ${markedQuestions[currentQ.id] ? 'bg-amber-500 text-white shadow-sm' : 'text-pink-700 hover:bg-pink-100'}`}
-                            >
-                                {markedQuestions[currentQ.id] ? '🚩 Đã đánh dấu' : '☐ Mark for review'}
-                            </button>
+            {/* Khung chia đôi màn hình chuẩn giao diện SAT Bluebook (Ảnh 2) */}
+            <div className="flex-1 p-3 md:p-5 bg-slate-100/70 overflow-hidden flex flex-col">
+                <TextHighlighter questionId={currentQ?.id} className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 h-full overflow-hidden">
+                    {/* Cột Trái: Đọc đoạn văn (Passage) - Đẩy lên đầu, không bị trôi ở giữa */}
+                    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
+                        <div className="w-full text-left">
+                            <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
+                            <p className="text-[15px] md:text-base leading-relaxed text-slate-800 font-sans whitespace-pre-line select-text cursor-text text-left">
+                                {currentQ.passageText || "Đọc kỹ câu hỏi và các lựa chọn đáp án ở khung bên phải để hoàn thành câu hỏi."}
+                            </p>
                         </div>
+                    </div>
 
-                        <h3 className="font-bold text-sm text-slate-800 mb-6 leading-relaxed whitespace-pre-line select-text cursor-text">
-                            {currentQ.questionText}
-                        </h3>
+                    {/* Cột Phải: Câu hỏi và các lựa chọn đáp án theo chuẩn Ảnh 2 */}
+                    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 md:p-8 overflow-y-auto flex flex-col justify-between">
+                        <div className="w-full text-left">
+                            {/* Header câu hỏi: Badge số câu + Đánh dấu xem lại */}
+                            <div className="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
+                                <div className="flex items-center gap-2.5">
+                                    <span className="w-7 h-7 rounded-xl bg-blue-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                                        {currentIndex + 1}
+                                    </span>
+                                    <span className="text-xs font-black tracking-wider text-slate-700 uppercase">
+                                        CÂU HỎI
+                                    </span>
+                                </div>
+                                <button 
+                                    type="button"
+                                    onClick={toggleMarkReview}
+                                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 ${
+                                        markedQuestions[currentQ.id] 
+                                            ? 'bg-amber-500 text-white shadow-xs' 
+                                            : 'text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                    }`}
+                                >
+                                    <span>{markedQuestions[currentQ.id] ? '🚩' : '🔖'}</span>
+                                    <span>{markedQuestions[currentQ.id] ? 'Đã đánh dấu' : 'Đánh dấu xem lại'}</span>
+                                </button>
+                            </div>
 
-                        <div className="space-y-3">
-                            {[
-                                { key: 'A', text: currentQ.optionA },
-                                { key: 'B', text: currentQ.optionB },
-                                { key: 'C', text: currentQ.optionC },
-                                { key: 'D', text: currentQ.optionD }
-                            ].map(opt => (
-                                opt.text && (
-                                    <div 
-                                        key={opt.key}
-                                        onClick={() => handleSelectOption(opt.key)}
-                                        className={`flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition ${selectedAnswers[currentQ.id] === opt.key ? 'border-pink-500 bg-pink-50/60 shadow-sm' : 'border-slate-200 hover:border-pink-200 bg-white'}`}
-                                    >
-                                        <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs transition ${selectedAnswers[currentQ.id] === opt.key ? 'bg-pink-500 text-white border-pink-500 shadow-sm' : 'border-slate-300 text-slate-500'}`}>
-                                            {opt.key}
+                            {/* Câu hỏi căn đầu theo chuẩn ảnh 2 */}
+                            <h3 className="font-semibold text-sm md:text-[15px] text-slate-800 mb-6 leading-relaxed whitespace-pre-line select-text cursor-text">
+                                {currentQ.questionText}
+                            </h3>
+
+                            {/* Các lựa chọn đáp án A, B, C, D */}
+                            <div className="space-y-3">
+                                {[
+                                    { key: 'A', text: currentQ.optionA },
+                                    { key: 'B', text: currentQ.optionB },
+                                    { key: 'C', text: currentQ.optionC },
+                                    { key: 'D', text: currentQ.optionD }
+                                ].map(opt => (
+                                    opt.text && (
+                                        <div 
+                                            key={opt.key}
+                                            onClick={() => handleSelectOption(opt.key)}
+                                            className={`flex items-center gap-3.5 p-3.5 md:p-4 rounded-2xl border cursor-pointer transition ${
+                                                selectedAnswers[currentQ.id] === opt.key 
+                                                    ? 'border-pink-500 bg-pink-50/50 shadow-xs ring-1 ring-pink-500' 
+                                                    : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/60'
+                                            }`}
+                                        >
+                                            <div className={`w-7 h-7 rounded-full border flex items-center justify-center font-bold text-xs transition flex-shrink-0 ${
+                                                selectedAnswers[currentQ.id] === opt.key 
+                                                    ? 'bg-pink-500 text-white border-pink-500 shadow-xs' 
+                                                    : 'border-slate-300 text-slate-600 bg-slate-50'
+                                            }`}>
+                                                {opt.key}
+                                            </div>
+                                            <span className="text-sm font-medium text-slate-800 select-text cursor-text">{opt.text}</span>
                                         </div>
-                                        <span className="text-sm font-medium text-slate-700 select-text cursor-text">{opt.text}</span>
-                                    </div>
-                                )
-                            ))}
+                                    )
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Footer điều hướng ở chân thẻ */}
+                        <div className="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
+                            <button 
+                                disabled={currentIndex === 0}
+                                onClick={() => setCurrentIndex(prev => prev - 1)}
+                                className={`px-5 py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center gap-1 ${
+                                    currentIndex === 0 
+                                        ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400' 
+                                        : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                                }`}
+                            >
+                                ‹ Quay lại
+                            </button>
+
+                            <button 
+                                onClick={() => setShowPalette(!showPalette)}
+                                className="text-xs font-black text-slate-700 hover:text-pink-600 bg-slate-100 hover:bg-pink-50 border border-slate-200 px-4 py-2 rounded-xl transition cursor-pointer shadow-xs flex items-center gap-1.5"
+                            >
+                                <span>CÂU {currentIndex + 1} / {questions.length}</span>
+                                <span>︿</span>
+                            </button>
+
+                            {currentIndex < questions.length - 1 ? (
+                                <button 
+                                    onClick={() => setCurrentIndex(prev => prev + 1)}
+                                    className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer flex items-center gap-1"
+                                >
+                                    <span>Tiếp</span>
+                                    <span>›</span>
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={handleOpenSubmitModal}
+                                    className="px-6 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-600/20 transition cursor-pointer"
+                                >
+                                    Nộp bài thi 🏁
+                                </button>
+                            )}
                         </div>
                     </div>
-
-                    {/* Footer */}
-                    <div className="flex justify-between items-center mt-10 pt-6 border-t border-pink-100">
-                        <button 
-                            disabled={currentIndex === 0}
-                            onClick={() => setCurrentIndex(prev => prev - 1)}
-                            className={`px-6 py-2.5 rounded-2xl text-xs font-bold border transition cursor-pointer ${currentIndex === 0 ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400' : 'border-slate-200 text-slate-700 hover:bg-pink-50'}`}
-                        >
-                            ‹ Câu trước
-                        </button>
-
-                        <button 
-                            onClick={() => setShowPalette(!showPalette)}
-                            className="text-xs font-extrabold text-pink-600 bg-pink-50 border border-pink-200 px-4 py-2 rounded-2xl hover:bg-pink-100 transition cursor-pointer shadow-sm"
-                        >
-                            Question {currentIndex + 1} of {questions.length} ︿
-                        </button>
-
-                        {currentIndex < questions.length - 1 ? (
-                            <button 
-                                onClick={() => setCurrentIndex(prev => prev + 1)}
-                                className="px-6 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-pink-600/20 transition cursor-pointer"
-                            >
-                                Câu tiếp ›
-                            </button>
-                        ) : (
-                            <button 
-                                onClick={handleOpenSubmitModal}
-                                className="px-6 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-pink-600/20 transition cursor-pointer"
-                            >
-                                Nộp bài thi 🏁
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </TextHighlighter>
+                </TextHighlighter>
+            </div>
 
             {/* Modal */}
             {modalConfig.isOpen && (

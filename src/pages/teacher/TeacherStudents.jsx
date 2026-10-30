@@ -13,6 +13,21 @@ export default function TeacherStudents() {
     const [totalCount, setTotalCount] = useState(0);
     const [error, setError] = useState('');
 
+    const handleRemoveStudent = async (studentId, studentName) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn gỡ học viên "${studentName}" ra khỏi lớp ${selectedClass}?`)) {
+            return;
+        }
+        try {
+            await api.post(`/tests/class/${selectedClass}/remove-student/${studentId}`);
+            setStudents(prev => prev.filter(s => s.id !== studentId));
+            setTotalCount(prev => Math.max(0, prev - 1));
+            alert(`Đã gỡ học viên "${studentName}" ra khỏi lớp thành công!`);
+        } catch (err) {
+            console.error("Lỗi khi gỡ học viên:", err);
+            alert(err.response?.data?.message || "Không thể gỡ học viên. Vui lòng thử lại!");
+        }
+    };
+
     useEffect(() => {
         if (!selectedClass) {
             setStudents([]);
@@ -70,16 +85,17 @@ export default function TeacherStudents() {
                         <th className="pb-3 px-4">Họ và tên</th>
                         <th className="pb-3 px-4">Mã lớp</th>
                         <th className="pb-3 px-4">Trạng thái học phí</th>
+                        <th className="pb-3 px-4 text-right">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-pink-50">
                     {error ? (
                         <tr>
-                            <td colSpan="3" role="alert" className="py-8 text-center text-rose-500 text-xs">{error}</td>
+                            <td colSpan="4" role="alert" className="py-8 text-center text-rose-500 text-xs">{error}</td>
                         </tr>
                     ) : students.length === 0 ? (
                         <tr>
-                            <td colSpan="3" className="py-8 text-center text-slate-400 text-xs">Chưa có học viên nào đăng ký vào lớp này.</td>
+                            <td colSpan="4" className="py-8 text-center text-slate-400 text-xs">Chưa có học viên nào đăng ký vào lớp này.</td>
                         </tr>
                     ) : (
                         students.map((student) => (
@@ -96,6 +112,17 @@ export default function TeacherStudents() {
                                     ) : (
                                         <span className="px-3 py-1 bg-rose-50 text-rose-500 text-xs font-bold rounded-full border border-rose-100">Chưa đóng</span>
                                     )}
+                                </td>
+                                <td className="py-4 px-4 text-right">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveStudent(student.id, student.fullName)}
+                                        className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1 ml-auto"
+                                        title="Gỡ học viên này ra khỏi lớp"
+                                    >
+                                        <span>✕</span>
+                                        <span>Gỡ khỏi lớp</span>
+                                    </button>
                                 </td>
                             </tr>
                         ))

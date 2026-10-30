@@ -32,6 +32,27 @@ export default function TeacherOverview() {
     const [isViewingVideo, setIsViewingVideo] = useState(false);
     const [isLoadingReview, setIsLoadingReview] = useState(false);
 
+    const handleDeleteTest = async (testId, testTitle) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa bài test "${testTitle}" không? Toàn bộ câu hỏi, bài làm và điểm số của học sinh trong bài test này sẽ bị xóa.`)) {
+            return;
+        }
+        try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            await api.delete(`/tests/${testId}`, {
+                params: { userId: user.id }
+            });
+            setTests(prev => prev.filter(t => t.id !== testId));
+            setTestCount(prev => Math.max(0, prev - 1));
+            if (selectedTest?.id === testId) {
+                setSelectedTest(null);
+            }
+            alert(`Đã xóa bài test "${testTitle}" thành công!`);
+        } catch (err) {
+            console.error("Lỗi khi xóa bài test:", err);
+            alert(err.response?.data?.message || "Không thể xóa bài test. Vui lòng thử lại!");
+        }
+    };
+
     const handleOpenReview = async (submissionId) => {
         setIsLoadingReview(true);
         try {
@@ -197,6 +218,18 @@ export default function TeacherOverview() {
                                     <span className="text-xs font-bold text-pink-600 bg-white px-3 py-1 rounded-xl border border-pink-200 shadow-sm">
                                         {test.deadline ? `Hạn: ${new Date(test.deadline).toLocaleString()}` : 'Không giới hạn'}
                                     </span>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteTest(test.id, test.title);
+                                        }}
+                                        className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1"
+                                        title="Xóa bài test này"
+                                    >
+                                        <span>🗑️</span>
+                                        <span>Xóa</span>
+                                    </button>
                                     <span className="text-xs font-bold text-slate-400">Chi tiết ›</span>
                                 </div>
                             </div>
@@ -223,12 +256,23 @@ export default function TeacherOverview() {
                                 <h2 className="text-lg font-black text-pink-900 mt-1">{selectedTest.title}</h2>
                                 <p className="text-xs text-slate-400 mt-0.5">Lớp: {selectedClass} | Thời lượng đề: {selectedTest.duration} phút</p>
                             </div>
-                            <button 
-                                onClick={() => setSelectedTest(null)}
-                                className="w-8 h-8 rounded-full bg-pink-50 hover:bg-pink-100 text-pink-600 flex items-center justify-center font-bold text-xs transition cursor-pointer"
-                            >
-                                ✕
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeleteTest(selectedTest.id, selectedTest.title)}
+                                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5"
+                                    title="Xóa bài test này khỏi hệ thống"
+                                >
+                                    <span>🗑️</span>
+                                    <span>Xóa bài test</span>
+                                </button>
+                                <button 
+                                    onClick={() => setSelectedTest(null)}
+                                    className="w-8 h-8 rounded-full bg-pink-50 hover:bg-pink-100 text-pink-600 flex items-center justify-center font-bold text-xs transition cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
                         </div>
 
                         {isLoadingDetail ? (
@@ -424,11 +468,11 @@ export default function TeacherOverview() {
                             </div>
                         ) : currentQ ? (
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100 overflow-hidden">
-                                {/* Cột Trái: Passage */}
-                                <div className="bg-white p-10 overflow-y-auto">
-                                    <span className="text-[11px] font-bold text-pink-400 uppercase tracking-widest mb-3 block">Reading Passage</span>
-                                    <p className="text-sm leading-relaxed text-slate-700 font-serif whitespace-pre-line">
-                                        {currentQ.passageText || "Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải."}
+                                {/* Cột Trái: Passage - Căn đầu theo chuẩn */}
+                                <div className="bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
+                                    <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
+                                    <p className="text-[15px] leading-relaxed text-slate-800 font-sans whitespace-pre-line text-left">
+                                        {currentQ.passageText || "Đọc kỹ câu hỏi và các lựa chọn đáp án ở khung bên phải."}
                                     </p>
                                 </div>
 

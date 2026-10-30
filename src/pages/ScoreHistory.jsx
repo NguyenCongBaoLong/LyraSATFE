@@ -302,10 +302,10 @@ export default function ScoreHistory() {
                             </div>
                         ) : currentQ ? (
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100 overflow-hidden">
-                                {/* Cột Trái: Passage */}
-                                <div className="bg-white p-10 overflow-y-auto">
-                                    <span className="text-[11px] font-bold text-pink-400 uppercase tracking-widest mb-3 block">Reading Passage</span>
-                                    <p className="text-sm leading-relaxed text-slate-700 font-serif whitespace-pre-line">
+                                {/* Cột Trái: Passage - Căn đầu */}
+                                <div className="bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
+                                    <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
+                                    <p className="text-[15px] leading-relaxed text-slate-800 font-sans whitespace-pre-line text-left">
                                         {currentQ.passageText || "Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải."}
                                     </p>
                                 </div>
