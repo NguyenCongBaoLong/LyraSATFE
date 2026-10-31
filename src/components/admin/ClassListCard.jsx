@@ -10,7 +10,8 @@ export default function ClassListCard({
     onPageChange,
     onOpenClass,
     onDeleteClass,
-    onAssignTeacher
+    onAssignTeacher,
+    onCoordinateClass
 }) {
     return (
         <div className="bg-white p-8 rounded-3xl border border-pink-100 shadow-sm font-sans select-none">
@@ -43,13 +44,26 @@ export default function ClassListCard({
                                     <span className="font-black text-pink-600 bg-pink-100 px-2.5 py-1 rounded-lg mr-2 group-hover:bg-pink-200 uppercase">{code}</span>
                                     <span className="font-bold text-slate-700 text-sm group-hover:text-pink-900">{name}</span>
                                 </div>
-                                <button 
-                                    onClick={(e) => onDeleteClass(e, id, code)}
-                                    className="text-slate-400 hover:text-red-500 p-1.5 transition cursor-pointer"
-                                    title="Xóa lớp học"
-                                >
-                                    🗑️
-                                </button>
+                                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                    {onCoordinateClass && (
+                                        <button 
+                                            type="button"
+                                            onClick={() => onCoordinateClass(code)}
+                                            className="px-2.5 py-1 bg-white hover:bg-pink-500 text-pink-600 hover:text-white border border-pink-200 hover:border-pink-500 rounded-xl font-extrabold text-[11px] transition shadow-xs flex items-center gap-1 cursor-pointer"
+                                            title={`Vào điều phối đề thi, chấm bài & học viên cho lớp ${code}`}
+                                        >
+                                            <span>🎯</span>
+                                            <span>Điều phối lớp</span>
+                                        </button>
+                                    )}
+                                    <button 
+                                        onClick={(e) => onDeleteClass(e, id, code)}
+                                        className="text-slate-400 hover:text-red-500 p-1.5 transition cursor-pointer"
+                                        title="Xóa lớp học"
+                                    >
+                                        🗑️
+                                    </button>
+                                </div>
                             </div>
 
                             {hasTeachers ? (

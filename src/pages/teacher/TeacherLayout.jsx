@@ -9,6 +9,7 @@ export default function TeacherLayout() {
     const navigate = useNavigate();
     const location = useLocation();
     const user = JSON.parse(localStorage.getItem('user')) || {};
+    const isAdmin = user.role === 'Admin';
     const teacherEmail = user.email || '';
 
     const [teacherClasses, setTeacherClasses] = useState([]);
@@ -65,6 +66,31 @@ export default function TeacherLayout() {
                         <div className="text-xl font-black text-pink-600 tracking-wider">LYRA SAT</div>
                         <NotificationBell align="left" />
                     </div>
+
+                    {isAdmin && (
+                        <div className="mb-5 p-3.5 bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-500 text-white rounded-2xl shadow-sm border border-purple-400/30">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                                    <span>🛡️</span>
+                                    <span>Admin Điều Phối</span>
+                                </span>
+                                <span className="text-[9px] bg-white/20 px-2 py-0.5 rounded-full font-extrabold uppercase">
+                                    Toàn quyền
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-white/90 leading-tight">
+                                Bạn có quyền điều phối toàn bộ lớp học, đề thi & học viên.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/admin')}
+                                className="mt-2.5 w-full py-2 bg-white text-purple-700 hover:bg-purple-50 text-[11px] font-black rounded-xl transition cursor-pointer shadow-xs flex items-center justify-center gap-1.5 active:scale-95"
+                            >
+                                <span>⬅️</span>
+                                <span>Về Trang Admin</span>
+                            </button>
+                        </div>
+                    )}
                     
                     {/* Dropdown chọn lớp học & Nút Quản lý Đội ngũ Giáo viên */}
                     <div className="mb-6 bg-pink-50/60 p-4 rounded-2xl border border-pink-100">
@@ -96,7 +122,7 @@ export default function TeacherLayout() {
                             >
                                 {teacherClasses.map((c) => (
                                     <option key={c.code} value={c.code}>
-                                        {c.code} - {c.name} {c.isLead ? '👑 [Key chính]' : ''}
+                                        {c.code} - {c.name} {isAdmin ? '🛡️ [Admin điều phối]' : (c.isLead ? '👑 [Key chính]' : '')}
                                     </option>
                                 ))}
                             </select>
@@ -104,7 +130,11 @@ export default function TeacherLayout() {
                         {currentClassObj && (
                             <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
                                 <span>Vai trò của bạn:</span>
-                                {currentClassObj.isLead ? (
+                                {isAdmin ? (
+                                    <span className="font-extrabold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md flex items-center gap-1 border border-purple-200">
+                                        🛡️ Admin Điều Phối
+                                    </span>
+                                ) : currentClassObj.isLead ? (
                                     <span className="font-extrabold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md flex items-center gap-1">
                                         👑 Giáo viên chính
                                     </span>

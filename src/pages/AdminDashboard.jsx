@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
 // Import các component đã tách
@@ -12,6 +13,7 @@ import AlertModal from '../components/admin/AlertModal';
 import LogoutButton from '../components/LogoutButton';
 
 export default function AdminDashboard() {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('users'); // 'users' | 'classes'
 
     // State Dữ liệu
@@ -175,6 +177,44 @@ export default function AdminDashboard() {
         } catch (err) {
             console.error("Lỗi thay đổi trạng thái tài khoản:", err);
             showAlert("Lỗi", err.response?.data?.message || "Không thể cập nhật trạng thái tài khoản.", "error");
+        }
+    };
+
+    // Xử lý Điều phối Lớp học (chuyển sang Teacher Portal với toàn quyền Admin)
+    const handleCoordinateClass = (classCode) => {
+        localStorage.setItem('teacher_selected_class', classCode);
+        navigate('/teacher/overview');
+    };
+
+    // Xử lý Khóa / Mở khóa đăng nhập tài khoản giáo viên
+    const handleToggleTeacherStatus = async (teacherId, teacherName, currentIsActive) => {
+        const actionText = currentIsActive ? 'khóa quyền đăng nhập' : 'mở khóa đăng nhập';
+        if (!window.confirm(`Bạn có chắc chắn muốn ${actionText} cho giáo viên "${teacherName}"?`)) {
+            return;
+        }
+        try {
+            const res = await api.post(`/admin/users/${teacherId}/toggle-status`);
+            showAlert("Thành công! 🎉", res.data.message);
+            setTeacherRefresh(prev => prev + 1);
+        } catch (err) {
+            console.error("Lỗi thay đổi trạng thái giáo viên:", err);
+            showAlert("Lỗi", err.response?.data?.message || "Không thể cập nhật trạng thái tài khoản giáo viên.", "error");
+        }
+    };
+
+    // Xử lý Xóa vĩnh viễn tài khoản giáo viên
+    const handleDeleteTeacher = async (teacherId, teacherName) => {
+        if (!window.confirm(`CẢNH BÁO NGUY HIỂM:\nBạn có chắc chắn muốn XÓA VĨNH VIỄN tài khoản giáo viên "${teacherName}" khỏi hệ thống?\nLưu ý: Các lớp học do giáo viên này phụ trách vẫn được giữ nguyên.`)) {
+            return;
+        }
+        try {
+            const res = await api.delete(`/admin/users/${teacherId}`);
+            showAlert("Đã xóa! 🗑️", res.data.message);
+            setTeacherRefresh(prev => prev + 1);
+            loadTeacherOptions();
+        } catch (err) {
+            console.error("Lỗi xóa tài khoản giáo viên:", err);
+            showAlert("Lỗi", err.response?.data?.message || "Không thể xóa tài khoản giáo viên.", "error");
         }
     };
 
@@ -384,7 +424,17 @@ export default function AdminDashboard() {
                         <h1 className="text-xl font-black text-pink-900 tracking-wider">LYRA SAT ADMIN</h1>
                         <p className="text-xs text-slate-400 mt-0.5">Trang quản trị tài khoản và danh mục khóa học</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/teacher/overview')}
+                            className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white text-xs font-black px-4 py-2.5 rounded-2xl shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95"
+                            title="Truy cập khu vực giảng viên để điều phối, giao bài, chấm điểm và xem tất cả lớp"
+                        >
+                            <span>👩‍🏫</span>
+                            <span>Khu Vực Điều Phối Lớp Học</span>
+                            <span>➔</span>
+                        </button>
                         <div className="bg-pink-50 border border-pink-200 px-4 py-2 rounded-2xl text-xs font-bold text-pink-700">
                             Quản trị viên
                         </div>
@@ -431,6 +481,8 @@ export default function AdminDashboard() {
                             pageSize={8}
                             totalCount={teacherListing.totalCount}
                             onPageChange={setTeacherPage}
+                            onToggleStatus={handleToggleTeacherStatus}
+                            onDeleteTeacher={handleDeleteTeacher}
                         />
                     </div>
                 )}
@@ -514,6 +566,7 @@ export default function AdminDashboard() {
                 onAddTeacherToClass={handleAddTeacherToClass}
                 onRemoveTeacherFromClass={handleRemoveTeacherFromClass}
                 onTransferLeadKey={handleTransferLeadKey}
+                onCoordinateClass={handleCoordinateClass}
             />
 
             {/* Modal Thông báo */}
