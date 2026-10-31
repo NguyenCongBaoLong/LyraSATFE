@@ -15,7 +15,14 @@ export default function ClassDetailModal({
     studentToAddId,
     setStudentToAddId,
     isLoadingStudents,
-    onAddStudent
+    onAddStudent,
+    // Quản lý 2-4 giáo viên của lớp
+    classTeachers = [],
+    allTeachers = [],
+    teacherToAddId = '',
+    setTeacherToAddId = () => {},
+    onAddTeacherToClass = () => {},
+    onRemoveTeacherFromClass = () => {}
 }) {
     if (!selectedClass) return null;
 
@@ -23,8 +30,8 @@ export default function ClassDetailModal({
     const className = selectedClass.className || selectedClass.ClassName;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-fadeIn p-4">
-            <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-pink-100 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-fadeIn p-4 font-sans select-none">
+            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border border-pink-100 relative max-h-[90vh] overflow-y-auto">
                 {/* Header Modal */}
                 <div className="flex justify-between items-center mb-6 pb-4 border-b border-pink-100">
                     <div>
@@ -43,7 +50,66 @@ export default function ClassDetailModal({
                     </button>
                 </div>
 
-                {/* Học sinh có thể thêm vào lớp */}
+                {/* 1. MỤC QUẢN LÝ GIÁO VIÊN PHỤ TRÁCH (HỖ TRỢ 2-4 GIÁO VIÊN) */}
+                <div className="mb-6 p-4 bg-pink-50/40 rounded-2xl border border-pink-100">
+                    <div className="flex justify-between items-center mb-3">
+                        <h4 className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1.5">
+                            <span>👩‍🏫</span>
+                            <span>Giáo viên phụ trách lớp ({classTeachers.length}/4)</span>
+                        </h4>
+                        <span className="text-[11px] text-pink-600 font-bold">Hỗ trợ phân công 2 - 4 giáo viên</span>
+                    </div>
+
+                    {/* Danh sách giáo viên đang phụ trách */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        {classTeachers.length === 0 ? (
+                            <span className="text-xs text-slate-400 italic">Chưa có giáo viên nào phụ trách lớp này.</span>
+                        ) : (
+                            classTeachers.map(t => (
+                                <span key={t.id || t.Id} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-pink-200 rounded-xl text-xs font-bold text-slate-700 shadow-xs">
+                                    <span>👩‍🏫 {t.fullName || t.FullName}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => onRemoveTeacherFromClass(t.id || t.Id, t.fullName || t.FullName)}
+                                        className="text-slate-400 hover:text-rose-500 font-black ml-1 cursor-pointer transition"
+                                        title="Gỡ giáo viên này khỏi lớp"
+                                    >
+                                        ✕
+                                    </button>
+                                </span>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Form thêm giáo viên mới vào lớp (nếu chưa đủ 4 giáo viên) */}
+                    {classTeachers.length < 4 && (
+                        <form onSubmit={onAddTeacherToClass} className="flex gap-2 items-center">
+                            <select
+                                value={teacherToAddId}
+                                onChange={(e) => setTeacherToAddId(e.target.value)}
+                                className="w-full px-3 py-2 bg-white rounded-xl border border-pink-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-400 cursor-pointer"
+                            >
+                                <option value="">-- Thêm giáo viên cùng phụ trách (Tối đa 4 GV) --</option>
+                                {allTeachers
+                                    .filter(t => !classTeachers.some(ct => (ct.id || ct.Id) === (t.id || t.Id)))
+                                    .map(t => (
+                                        <option key={t.id || t.Id} value={t.id || t.Id}>
+                                            {t.fullName || t.FullName} ({t.email || t.Email})
+                                        </option>
+                                    ))}
+                            </select>
+                            <button
+                                type="submit"
+                                disabled={!teacherToAddId}
+                                className="px-4 py-2 bg-pink-500 hover:bg-pink-600 disabled:bg-slate-300 text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer whitespace-nowrap"
+                            >
+                                + Thêm GV
+                            </button>
+                        </form>
+                    )}
+                </div>
+
+                {/* 2. MỤC HỌC SINH CÓ THỂ THÊM VÀO LỚP */}
                 <div className="mb-6">
                     <div className="flex justify-between items-center mb-2">
                         <h4 className="text-xs font-bold uppercase text-slate-400">
@@ -65,7 +131,7 @@ export default function ClassDetailModal({
                             ))}
                         </select>
                         <button 
-                            type="submit"
+                            type="submit" 
                             disabled={!studentToAddId}
                             className="px-4 py-2 bg-pink-500 hover:bg-pink-600 disabled:bg-slate-300 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer whitespace-nowrap"
                         >
@@ -82,7 +148,7 @@ export default function ClassDetailModal({
                     />
                 </div>
 
-                {/* Danh Sách Học Sinh */}
+                {/* 3. MỤC DANH SÁCH HỌC SINH TRONG LỚP */}
                 <div>
                     <h4 className="text-xs font-bold uppercase text-slate-400 mb-3">
                         Danh sách Học Sinh ({classStudentCount})

@@ -38,9 +38,11 @@ export default function AdminDashboard() {
     // Modal thông báo
     const [modal, setModal] = useState({ isOpen: false, title: '', message: '', type: 'success' });
 
-    // Modal Học sinh trong Lớp
+    // Modal Quản lý Học sinh & Giáo viên trong Lớp (2-4 Giáo viên)
     const [selectedClassForStudents, setSelectedClassForStudents] = useState(null);
     const [classStudents, setClassStudents] = useState([]);
+    const [classTeachers, setClassTeachers] = useState([]);
+    const [teacherToAddId, setTeacherToAddId] = useState('');
     const [classStudentPage, setClassStudentPage] = useState(1);
     const [classStudentCount, setClassStudentCount] = useState(0);
     const [availableStudents, setAvailableStudents] = useState([]);
@@ -264,13 +266,14 @@ export default function AdminDashboard() {
         setStudentToAddId('');
 
         try {
-            const [studentsRes, availableRes] = await Promise.all([
+            const [studentsRes, availableRes, teachersRes] = await Promise.all([
                 api.get(`/admin/classes/${code}/students`, {
                     params: { page: studentPage, pageSize: 8 }
                 }),
                 api.get(`/admin/classes/${code}/available-students`, {
                     params: { page: availablePage, pageSize: 10 }
-                })
+                }),
+                api.get(`/admin/classes/${code}/teachers`).catch(() => ({ data: [] }))
             ]);
             setClassStudents(studentsRes.data.items);
             setClassStudentPage(studentsRes.data.page);
@@ -278,6 +281,7 @@ export default function AdminDashboard() {
             setAvailableStudents(availableRes.data.items);
             setAvailableStudentPage(availableRes.data.page);
             setAvailableStudentCount(availableRes.data.totalCount);
+            setClassTeachers(teachersRes.data || []);
         } catch (err) {
             console.error("Lỗi lấy danh sách học sinh:", err);
             showAlert("Lỗi", "Không thể tải danh sách học sinh của lớp.", "error");
@@ -302,6 +306,50 @@ export default function AdminDashboard() {
             handleOpenClassStudents(selectedClassForStudents, classStudentPage, availableStudentPage);
         } catch (err) {
             showAlert("Lỗi", err.response?.data?.message || "Không thể thêm học sinh vào lớp.", "error");
+        }
+    };
+
+    // Xử lý Thêm Giáo Viên vào Lớp (hỗ trợ phân công 2 - 4 giáo viên)
+    const handleAddTeacherToClass = async (e) => {
+        e.preventDefault();
+        if (!teacherToAddId || !selectedClassForStudents) return;
+        const code = selectedClassForStudents.classCode || selectedClassForStudents.ClassCode;
+
+        try {
+            await api.post(`/admin/classes/${code}/teachers`, {
+                teacherId: parseInt(teacherToAddId)
+            });
+            showAlert("Thành công! 👩‍🏫", "Đã phân công giáo viên vào lớp học!");
+            setTeacherToAddId('');
+            // Tải lại danh sách giáo viên của lớp
+            const res = await api.get(`/admin/classes/${code}/teachers`);
+            setClassTeachers(res.data || []);
+            setClassRefresh(v => v + 1);
+        } catch (err) {
+            console.error("Lỗi thêm giáo viên:", err);
+            showAlert("Lỗi", err.response?.data?.message || "Không thể phân công giáo viên vào lớp.", "error");
+        }
+    };
+
+    // Xử lý Gỡ Giáo Viên khỏi Lớp
+    const handleRemoveTeacherFromClass = async (teacherId, teacherName) => {
+        if (!selectedClassForStudents) return;
+        const code = selectedClassForStudents.classCode || selectedClassForStudents.ClassCode;
+
+        if (!window.confirm(`Bạn có chắc chắn muốn gỡ giáo viên "${teacherName}" khỏi lớp ${code}?`)) {
+            return;
+        }
+
+        try {
+            await api.delete(`/admin/classes/${code}/teachers/${teacherId}`);
+            showAlert("Đã gỡ! 🗑️", `Đã gỡ giáo viên "${teacherName}" khỏi lớp ${code}!`);
+            // Tải lại danh sách giáo viên của lớp
+            const res = await api.get(`/admin/classes/${code}/teachers`);
+            setClassTeachers(res.data || []);
+            setClassRefresh(v => v + 1);
+        } catch (err) {
+            console.error("Lỗi gỡ giáo viên:", err);
+            showAlert("Lỗi", err.response?.data?.message || "Không thể gỡ giáo viên khỏi lớp.", "error");
         }
     };
 
@@ -437,6 +485,12 @@ export default function AdminDashboard() {
                 setStudentToAddId={setStudentToAddId}
                 isLoadingStudents={isLoadingStudents}
                 onAddStudent={handleAddStudentToClass}
+                classTeachers={classTeachers}
+                allTeachers={teachers}
+                teacherToAddId={teacherToAddId}
+                setTeacherToAddId={setTeacherToAddId}
+                onAddTeacherToClass={handleAddTeacherToClass}
+                onRemoveTeacherFromClass={handleRemoveTeacherFromClass}
             />
 
             {/* Modal Thông báo */}
