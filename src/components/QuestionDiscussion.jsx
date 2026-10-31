@@ -181,7 +181,8 @@ export default function QuestionDiscussion({
         setNewCommentText('');
 
         try {
-            const res = await api.post(`/questions/${questionId}/comments`, {
+            const res = await api.post(`/comments`, {
+                questionId: parseInt(questionId),
                 content,
                 userId: currentUser?.id
             });
@@ -190,7 +191,9 @@ export default function QuestionDiscussion({
                 setComments(prev => prev.map(c => c.id === tempId ? { ...newCommentObj, ...savedComment } : c));
             }
         } catch (err) {
-            console.warn('API post comment failed, kept optimistic entry:', err);
+            console.error('Lỗi khi gửi bình luận:', err);
+            alert(err.response?.data?.message || 'Không thể gửi bình luận. Vui lòng thử lại!');
+            setComments(prev => prev.filter(c => c.id !== tempId));
         } finally {
             setSubmitting(false);
         }
@@ -234,8 +237,10 @@ export default function QuestionDiscussion({
         setReplyingToId(null);
 
         try {
-            const res = await api.post(`/questions/${questionId}/comments`, {
+            const res = await api.post(`/comments`, {
+                questionId: parseInt(questionId),
                 content,
+                parentCommentId: parentCommentId,
                 parentId: parentCommentId,
                 userId: currentUser?.id
             });
@@ -252,7 +257,14 @@ export default function QuestionDiscussion({
                 }));
             }
         } catch (err) {
-            console.warn('API post reply failed, kept optimistic entry:', err);
+            console.error('Lỗi khi gửi phản hồi:', err);
+            alert(err.response?.data?.message || 'Không thể gửi phản hồi. Vui lòng thử lại!');
+            setComments(prev => prev.map(c => {
+                if (c.id === parentCommentId) {
+                    return { ...c, replies: (c.replies || []).filter(r => r.id !== tempReplyId) };
+                }
+                return c;
+            }));
         } finally {
             setSubmitting(false);
         }
@@ -273,6 +285,7 @@ export default function QuestionDiscussion({
 
         try {
             await api.post(`/comments/${commentId}/pin`, {
+                userId: currentUser?.id,
                 isPinned: targetComment?.isPinned
             });
         } catch (err) {
@@ -313,7 +326,10 @@ export default function QuestionDiscussion({
         });
 
         try {
-            await api.post(`/comments/${commentId}/like`);
+            await api.post(`/comments/${commentId}/reaction`, {
+                userId: currentUser?.id,
+                reactionType: 'heart'
+            });
         } catch (err) {
             console.warn('API like toggle failed:', err);
         }

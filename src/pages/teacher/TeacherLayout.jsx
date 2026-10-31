@@ -58,9 +58,35 @@ export default function TeacherLayout() {
     const isActive = (path) => location.pathname === path;
 
     return (
-        <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex font-sans">
-            {/* Sidebar Cố định */}
-            <div className="w-72 bg-white border-r border-pink-100 p-6 flex flex-col justify-between hidden md:flex shadow-sm">
+        <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex flex-col md:flex-row font-sans">
+            {/* Mobile Header Bar (Dành cho điện thoại / Tablet màn hình nhỏ) */}
+            <header className="md:hidden bg-white border-b border-pink-100 px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-xs">
+                <div className="flex items-center gap-2">
+                    <span className="text-base font-black text-pink-600 tracking-wider">LYRA SAT</span>
+                    {selectedClass && (
+                        <span className="text-[11px] font-extrabold text-pink-700 bg-pink-50 border border-pink-200 px-2 py-0.5 rounded-lg">
+                            {selectedClass} {currentClassObj?.isLead ? '👑' : ''}
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    {selectedClass && (
+                        <button
+                            type="button"
+                            onClick={() => setShowTeachersModal(true)}
+                            className="text-[11px] font-extrabold text-pink-600 bg-pink-50 hover:bg-pink-100 px-2.5 py-1.5 rounded-xl border border-pink-200 flex items-center gap-1 cursor-pointer shadow-xs"
+                            title="Đội ngũ GV"
+                        >
+                            <span>👥</span>
+                            <span className="hidden xs:inline">Đội ngũ GV</span>
+                        </button>
+                    )}
+                    <NotificationBell align="right" />
+                </div>
+            </header>
+
+            {/* Sidebar Cố định (Desktop) */}
+            <div className="w-72 bg-white border-r border-pink-100 p-6 flex flex-col justify-between hidden md:flex shadow-sm shrink-0">
                 <div>
                     <div className="flex items-center justify-between mb-6">
                         <div className="text-xl font-black text-pink-600 tracking-wider">LYRA SAT</div>
@@ -187,7 +213,7 @@ export default function TeacherLayout() {
             </div>
 
             {/* Nội dung thay đổi linh hoạt theo URL */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pb-16 md:pb-0">
                 <Outlet context={{
                     selectedClass,
                     setSelectedClass,
@@ -196,6 +222,38 @@ export default function TeacherLayout() {
                     openTeachersModal: () => setShowTeachersModal(true)
                 }} />
             </div>
+
+            {/* Mobile Bottom Navigation Bar */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-pink-100 py-2 px-3 flex items-center justify-around z-40 shadow-lg">
+                <button 
+                    onClick={() => navigate('/teacher/overview')} 
+                    className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/teacher/overview') ? 'text-pink-600' : 'text-slate-400'}`}
+                >
+                    <span className="text-base">📊</span>
+                    <span>Tổng quan</span>
+                </button>
+                <button 
+                    onClick={() => navigate('/teacher/students')} 
+                    className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/teacher/students') ? 'text-pink-600' : 'text-slate-400'}`}
+                >
+                    <span className="text-base">👥</span>
+                    <span>Học viên</span>
+                </button>
+                <button 
+                    onClick={() => navigate('/teacher/upload')} 
+                    className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/teacher/upload') ? 'text-pink-600' : 'text-slate-400'}`}
+                >
+                    <span className="text-base">📝</span>
+                    <span>Giao bài</span>
+                </button>
+                <button 
+                    onClick={() => navigate('/teacher/vocab-upload')} 
+                    className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/teacher/vocab-upload') ? 'text-pink-600' : 'text-slate-400'}`}
+                >
+                    <span className="text-base">📖</span>
+                    <span>Từ vựng</span>
+                </button>
+            </nav>
 
             {/* Modal Quản lý Đội ngũ Giáo viên */}
             {showTeachersModal && selectedClass && (

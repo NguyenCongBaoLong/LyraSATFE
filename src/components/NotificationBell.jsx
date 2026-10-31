@@ -5,7 +5,8 @@ import api from '../api';
 
 const formatRelativeTime = (dateStr) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
+    const utcStr = dateStr.endsWith('Z') || dateStr.includes('+') ? dateStr : `${dateStr}Z`;
+    const date = new Date(utcStr);
     const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
     if (diffSec < 60) return 'vừa xong';
     const diffMin = Math.floor(diffSec / 60);
@@ -48,7 +49,7 @@ export default function NotificationBell({ className = '', align = 'right' }) {
             })
             .catch(() => {});
 
-        const interval = setInterval(fetchUnreadCount, 25000); // 25s polling
+        const interval = setInterval(fetchUnreadCount, 15000); // 15s fast polling
         return () => {
             isMounted = false;
             clearInterval(interval);
@@ -180,8 +181,8 @@ export default function NotificationBell({ className = '', align = 'right' }) {
                                         !n.isRead ? 'bg-pink-50/30' : ''
                                     }`}
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center shrink-0 mt-0.5">
-                                        <MessageSquare className="w-4 h-4" />
+                                    <div className="w-8 h-8 rounded-full bg-pink-100 text-pink-700 flex items-center justify-center shrink-0 mt-0.5 text-sm">
+                                        {n.type === 'test_submission' ? '📝' : n.type === 'comment_reply' ? '↩️' : '💬'}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-1 mb-0.5">
