@@ -1,1 +1,39 @@
 @import "tailwindcss";
+
+.passage-content {
+  white-space: pre-line;
+}
+
+.passage-content .passage-table-wrapper {
+  width: 100%;
+  margin: 1rem 0 1.25rem;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.passage-content .passage-table {
+  width: 100%;
+  min-width: 22rem;
+  border-collapse: collapse;
+  color: #334155;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+.passage-content .passage-table td {
+  border: 1px solid #e2e8f0;
+  padding: 0.65rem 0.8rem;
+  vertical-align: top;
+}
+
+.passage-content .passage-table tr:first-child td {
+  background: #fff1f5;
+  color: #831843;
+  font-weight: 700;
+}
+
+.passage-content .passage-table tr:nth-child(even) td {
+  background: #f8fafc;
+}

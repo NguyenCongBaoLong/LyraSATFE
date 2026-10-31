@@ -481,9 +481,16 @@ export default function DoTest() {
                     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
                         <div className="w-full text-left">
                             <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
-                            <p className="text-[15px] md:text-base leading-relaxed text-slate-800 font-sans whitespace-pre-line select-text cursor-text text-left">
-                                {currentQ.passageText || "Đọc kỹ câu hỏi và các lựa chọn đáp án ở khung bên phải để hoàn thành câu hỏi."}
-                            </p>
+                            {currentQ.passageText ? (
+                                <div
+                                    className="passage-content text-[15px] md:text-base leading-relaxed text-slate-800 font-sans select-text cursor-text text-left"
+                                    dangerouslySetInnerHTML={{ __html: currentQ.passageText }}
+                                />
+                            ) : (
+                                <p className="text-[15px] md:text-base leading-relaxed text-slate-800 font-sans select-text cursor-text text-left">
+                                    Đọc kỹ câu hỏi và các lựa chọn đáp án ở khung bên phải để hoàn thành câu hỏi.
+                                </p>
+                            )}
                         </div>
                     </div>
 
