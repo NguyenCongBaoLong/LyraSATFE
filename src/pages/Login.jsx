@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import lyraLogo from '../assets/lyra-logo.jpg';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
@@ -56,14 +58,25 @@ export default function Login() {
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Password</label>
-                            <input 
-                                type="password" 
-                                placeholder="••••••••"
-                                className="w-full px-4 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm text-slate-700 font-medium transition"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="••••••••"
+                                    className="w-full px-4 pr-12 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm text-slate-700 font-medium transition"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((visible) => !visible)}
+                                    aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                                    title={showPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                                    className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 transition hover:text-pink-600 cursor-pointer"
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
                         </div>
                         <button type="submit" className="w-full py-3.5 bg-pink-500 hover:bg-pink-600 transition rounded-2xl font-bold text-sm text-white shadow-lg shadow-pink-500/30 cursor-pointer">
                             Đăng nhập

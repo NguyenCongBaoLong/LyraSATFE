@@ -305,9 +305,16 @@ export default function ScoreHistory() {
                                 {/* Cột Trái: Passage - Căn đầu */}
                                 <div className="bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
                                     <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
-                                    <p className="text-[15px] leading-relaxed text-slate-800 font-sans whitespace-pre-line text-left">
-                                        {currentQ.passageText || "Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải."}
-                                    </p>
+                                    {currentQ.passageText ? (
+                                        <div
+                                            className="passage-content text-[15px] leading-relaxed text-slate-800 font-sans text-left"
+                                            dangerouslySetInnerHTML={{ __html: currentQ.passageText }}
+                                        />
+                                    ) : (
+                                        <p className="text-[15px] leading-relaxed text-slate-800 font-sans text-left">
+                                            Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải.
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Cột Phải: Question & Các đáp án được tô màu + Khung thảo luận */}
