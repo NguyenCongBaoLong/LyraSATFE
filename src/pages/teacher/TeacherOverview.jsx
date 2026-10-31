@@ -9,7 +9,7 @@ const TEST_PAGE_SIZE = 6;
 const SUBMISSION_PAGE_SIZE = 8;
 
 export default function TeacherOverview() {
-    const { selectedClass } = useOutletContext();
+    const { selectedClass, openTeachersModal } = useOutletContext();
     const navigate = useNavigate();
 
     const [tests, setTests] = useState([]);
@@ -161,7 +161,17 @@ export default function TeacherOverview() {
                 </div>
 
                 {/* Nhóm nút hành động được gom nhóm gọn gàng */}
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap">
+                    {openTeachersModal && (
+                        <button 
+                            onClick={openTeachersModal}
+                            className="flex-1 sm:flex-none bg-pink-50 border border-pink-200 hover:bg-pink-100 text-pink-700 text-xs font-extrabold px-3.5 py-2.5 rounded-2xl transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                            title="Xem và quản lý đội ngũ giáo viên phụ trách lớp"
+                        >
+                            <span>👥</span>
+                            <span>Đội ngũ GV</span>
+                        </button>
+                    )}
                     <button 
                         onClick={() => navigate('/teacher/vocab-upload')}
                         className="flex-1 sm:flex-none bg-white border-2 border-pink-200 hover:bg-pink-50 hover:border-pink-300 text-pink-700 text-xs font-extrabold px-4 py-2.5 rounded-2xl transition shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"

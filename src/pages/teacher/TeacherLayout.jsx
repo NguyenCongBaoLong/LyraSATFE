@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import api from '../../api';
 import LogoutButton from '../../components/LogoutButton';
 import NotificationBell from '../../components/NotificationBell';
+import ClassTeachersModal from '../../components/ClassTeachersModal';
 
 export default function TeacherLayout() {
     const navigate = useNavigate();
@@ -12,28 +13,47 @@ export default function TeacherLayout() {
 
     const [teacherClasses, setTeacherClasses] = useState([]);
     const [selectedClass, setSelectedClass] = useState(localStorage.getItem('teacher_selected_class') || '');
+    const [showTeachersModal, setShowTeachersModal] = useState(false);
 
-    useEffect(() => {
+    const fetchTeacherClasses = useCallback(async () => {
         if (!teacherEmail) return;
-        api.get(`/classes/teacher-classes?email=${encodeURIComponent(teacherEmail)}`)
-            .then(res => {
-                if (res.data && res.data.length > 0) {
-                    setTeacherClasses(res.data);
-                    if (!localStorage.getItem('teacher_selected_class')) {
+        try {
+            const res = await api.get(`/classes/teacher-classes?email=${encodeURIComponent(teacherEmail)}`);
+            if (res.data) {
+                setTeacherClasses(res.data);
+                if (res.data.length > 0) {
+                    const currentStored = localStorage.getItem('teacher_selected_class');
+                    const exists = res.data.some(c => c.code === currentStored);
+                    if (!exists || !currentStored) {
                         setSelectedClass(res.data[0].code);
                         localStorage.setItem('teacher_selected_class', res.data[0].code);
                     }
+                } else {
+                    setSelectedClass('');
+                    localStorage.removeItem('teacher_selected_class');
                 }
-            })
-            .catch(err => console.error("Lỗi tải danh sách lớp:", err));
+            }
+        } catch (err) {
+            console.error("Lỗi tải danh sách lớp:", err);
+        }
     }, [teacherEmail]);
+
+    useEffect(() => {
+        fetchTeacherClasses();
+    }, [fetchTeacherClasses]);
 
     const handleClassChange = (classCode) => {
         setSelectedClass(classCode);
         localStorage.setItem('teacher_selected_class', classCode);
-        window.dispatchEvent(new Event('classChanged')); // Sự kiện để các component con nhận biết đổi lớp
+        window.dispatchEvent(new Event('classChanged'));
     };
 
+    const handleTeamUpdated = (userLeft = false) => {
+        fetchTeacherClasses();
+        window.dispatchEvent(new Event('classChanged'));
+    };
+
+    const currentClassObj = teacherClasses.find(c => c.code === selectedClass);
     const isActive = (path) => location.pathname === path;
 
     return (
@@ -46,20 +66,55 @@ export default function TeacherLayout() {
                         <NotificationBell align="left" />
                     </div>
                     
-                    {/* Dropdown chọn lớp học */}
+                    {/* Dropdown chọn lớp học & Nút Quản lý Đội ngũ Giáo viên */}
                     <div className="mb-6 bg-pink-50/60 p-4 rounded-2xl border border-pink-100">
-                        <label className="block text-[10px] font-black uppercase text-pink-500 mb-1.5 tracking-wider">Khóa học đang quản lý</label>
-                        <select 
-                            value={selectedClass} 
-                            onChange={(e) => handleClassChange(e.target.value)}
-                            className="w-full bg-white border border-pink-200 text-slate-700 text-xs font-bold px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 cursor-pointer shadow-sm"
-                        >
-                            {teacherClasses.map((c) => (
-                                <option key={c.code} value={c.code}>
-                                    {c.code} - {c.name}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="block text-[10px] font-black uppercase text-pink-500 tracking-wider">
+                                Lớp đang quản lý
+                            </label>
+                            {selectedClass && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTeachersModal(true)}
+                                    className="text-[11px] font-extrabold text-pink-600 hover:text-pink-700 bg-pink-100/90 hover:bg-pink-200 px-2.5 py-1 rounded-xl transition flex items-center gap-1 shadow-xs cursor-pointer"
+                                    title="Xem & phân công giáo viên phụ trách lớp"
+                                >
+                                    <span>👥</span>
+                                    <span>Đội ngũ GV</span>
+                                </button>
+                            )}
+                        </div>
+                        {teacherClasses.length === 0 ? (
+                            <div className="text-xs text-slate-400 italic py-2">
+                                Bạn chưa được phân công lớp học nào.
+                            </div>
+                        ) : (
+                            <select 
+                                value={selectedClass} 
+                                onChange={(e) => handleClassChange(e.target.value)}
+                                className="w-full bg-white border border-pink-200 text-slate-700 text-xs font-bold px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 cursor-pointer shadow-sm"
+                            >
+                                {teacherClasses.map((c) => (
+                                    <option key={c.code} value={c.code}>
+                                        {c.code} - {c.name} {c.isLead ? '👑 [Key chính]' : ''}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                        {currentClassObj && (
+                            <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                                <span>Vai trò của bạn:</span>
+                                {currentClassObj.isLead ? (
+                                    <span className="font-extrabold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                        👑 Giáo viên chính
+                                    </span>
+                                ) : (
+                                    <span className="font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded-md">
+                                        👩‍🏫 GV Phụ trách
+                                    </span>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <hr className="border-pink-50 my-4" />
@@ -84,7 +139,7 @@ export default function TeacherLayout() {
                             aria-current={isActive('/teacher/upload') ? 'page' : undefined}
                             className={`w-full text-left px-4 py-3 rounded-2xl font-semibold transition text-sm ${isActive('/teacher/upload') ? 'bg-pink-500 text-white font-bold shadow-md shadow-pink-500/20' : 'text-slate-500 hover:bg-pink-50 hover:text-pink-600'}`}
                         >
-                             📝 Giao bài & Xóa bài nhầm
+                             📝 Giao bài & Xóa bài test
                         </button>
                         <button 
                             onClick={() => navigate('/teacher/vocab-upload')} 
@@ -103,8 +158,25 @@ export default function TeacherLayout() {
 
             {/* Nội dung thay đổi linh hoạt theo URL */}
             <div className="flex-1 overflow-y-auto">
-                <Outlet />
+                <Outlet context={{
+                    selectedClass,
+                    setSelectedClass,
+                    teacherClasses,
+                    reloadClasses: fetchTeacherClasses,
+                    openTeachersModal: () => setShowTeachersModal(true)
+                }} />
             </div>
+
+            {/* Modal Quản lý Đội ngũ Giáo viên */}
+            {showTeachersModal && selectedClass && (
+                <ClassTeachersModal
+                    isOpen={showTeachersModal}
+                    onClose={() => setShowTeachersModal(false)}
+                    classCode={selectedClass}
+                    className={currentClassObj?.name || selectedClass}
+                    onTeamUpdated={handleTeamUpdated}
+                />
+            )}
         </div>
     );
 }

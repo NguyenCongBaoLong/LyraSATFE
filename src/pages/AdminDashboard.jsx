@@ -273,7 +273,7 @@ export default function AdminDashboard() {
                 api.get(`/admin/classes/${code}/available-students`, {
                     params: { page: availablePage, pageSize: 10 }
                 }),
-                api.get(`/admin/classes/${code}/teachers`).catch(() => ({ data: [] }))
+                api.get(`/classes/${code}/team`).then(r => ({ data: r.data.teachers || [] })).catch(() => ({ data: [] }))
             ]);
             setClassStudents(studentsRes.data.items);
             setClassStudentPage(studentsRes.data.page);
@@ -328,6 +328,28 @@ export default function AdminDashboard() {
         } catch (err) {
             console.error("Lỗi thêm giáo viên:", err);
             showAlert("Lỗi", err.response?.data?.message || "Không thể phân công giáo viên vào lớp.", "error");
+        }
+    };
+
+    // Xử lý Truyền Key Chính (Giáo viên chính)
+    const handleTransferLeadKey = async (teacherId, teacherName) => {
+        if (!selectedClassForStudents) return;
+        const code = selectedClassForStudents.classCode || selectedClassForStudents.ClassCode;
+        if (!window.confirm(`XÁC NHẬN CHUYỂN KEY CHÍNH:\nBạn có chắc chắn muốn chuyển Key Giáo viên chính của lớp ${code} cho cô/thầy ${teacherName}?`)) return;
+        try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            await api.post(`/classes/${code}/team/transfer-key`, {
+                newLeadTeacherId: teacherId,
+                requestUserId: user.id
+            });
+            showAlert("Thành công! 👑", `Đã chuyển quyền Giáo viên chính cho ${teacherName}!`);
+            fetchClasses(classPage);
+            // Cập nhật lại danh sách giáo viên của lớp
+            const res = await api.get(`/classes/${code}/team`, { params: { userId: user.id } });
+            setClassTeachers(res.data.teachers || []);
+        } catch (err) {
+            console.error("Lỗi chuyển key chính:", err);
+            showAlert("Lỗi", err.response?.data?.message || "Không thể chuyển key chính.", "error");
         }
     };
 
@@ -491,6 +513,7 @@ export default function AdminDashboard() {
                 setTeacherToAddId={setTeacherToAddId}
                 onAddTeacherToClass={handleAddTeacherToClass}
                 onRemoveTeacherFromClass={handleRemoveTeacherFromClass}
+                onTransferLeadKey={handleTransferLeadKey}
             />
 
             {/* Modal Thông báo */}

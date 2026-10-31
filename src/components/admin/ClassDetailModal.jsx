@@ -65,19 +65,38 @@ export default function ClassDetailModal({
                         {classTeachers.length === 0 ? (
                             <span className="text-xs text-slate-400 italic">Chưa có giáo viên nào phụ trách lớp này.</span>
                         ) : (
-                            classTeachers.map(t => (
-                                <span key={t.id || t.Id} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-pink-200 rounded-xl text-xs font-bold text-slate-700 shadow-xs">
-                                    <span>👩‍🏫 {t.fullName || t.FullName}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => onRemoveTeacherFromClass(t.id || t.Id, t.fullName || t.FullName)}
-                                        className="text-slate-400 hover:text-rose-500 font-black ml-1 cursor-pointer transition"
-                                        title="Gỡ giáo viên này khỏi lớp"
-                                    >
-                                        ✕
-                                    </button>
-                                </span>
-                            ))
+                            classTeachers.map(t => {
+                                const teacherId = t.id || t.Id;
+                                const teacherName = t.fullName || t.FullName;
+                                const isLead = t.isLead || selectedClass?.teacherId === teacherId;
+                                return (
+                                    <span key={teacherId} className={`inline-flex items-center gap-2 px-3 py-1.5 bg-white border rounded-xl text-xs font-bold text-slate-700 shadow-xs ${isLead ? 'border-amber-300 bg-amber-50/50' : 'border-pink-200'}`}>
+                                        <span>{isLead ? '👑' : '👩‍🏫'} {teacherName}</span>
+                                        {isLead ? (
+                                            <span className="text-[10px] text-amber-800 font-extrabold bg-amber-100 px-1.5 py-0.5 rounded-md border border-amber-200">Key chính</span>
+                                        ) : (
+                                            onTransferLeadKey && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onTransferLeadKey(teacherId, teacherName)}
+                                                    className="text-[10px] text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold cursor-pointer transition"
+                                                    title="Chuyển quyền Giáo viên chính (nắm key) cho giáo viên này"
+                                                >
+                                                    🔑 Trao key
+                                                </button>
+                                            )
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => onRemoveTeacherFromClass(teacherId, teacherName)}
+                                            className="text-slate-400 hover:text-rose-500 font-black ml-0.5 cursor-pointer transition"
+                                            title="Gỡ giáo viên này khỏi lớp"
+                                        >
+                                            ✕
+                                        </button>
+                                    </span>
+                                );
+                            })
                         )}
                     </div>
 
