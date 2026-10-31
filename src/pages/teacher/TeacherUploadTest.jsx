@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import api from '../../api';
 
@@ -14,6 +14,39 @@ export default function TeacherUploadTest() {
     const [videoExplanationUrl, setVideoExplanationUrl] = useState('');
     const [file, setFile] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // State danh sách bài test đã giao (để giáo viên xóa khi giao nhầm)
+    const [recentTests, setRecentTests] = useState([]);
+    const [isLoadingTests, setIsLoadingTests] = useState(false);
+    const [testRefresh, setTestRefresh] = useState(0);
+
+    useEffect(() => {
+        if (!selectedClass) return;
+        setIsLoadingTests(true);
+        api.get(`/tests/class/${selectedClass}`, { params: { page: 1, pageSize: 20 } })
+            .then(res => {
+                setRecentTests(res.data.items || []);
+            })
+            .catch(err => console.error("Lỗi tải danh sách bài test:", err))
+            .finally(() => setIsLoadingTests(false));
+    }, [selectedClass, testRefresh]);
+
+    const handleDeleteAssignedTest = async (testId, testTitle) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa bài test "${testTitle}" (giao nhầm) không?\nToàn bộ dữ liệu câu hỏi và bài làm của bài này sẽ bị xóa khỏi lớp ${selectedClass}.`)) {
+            return;
+        }
+        try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            await api.delete(`/tests/${testId}`, {
+                params: { userId: user.id }
+            });
+            showAlert("Đã xóa! 🗑️", `Đã xóa bài test "${testTitle}" thành công!`);
+            setTestRefresh(prev => prev + 1);
+        } catch (err) {
+            console.error("Lỗi khi xóa bài test:", err);
+            showAlert("Lỗi", err.response?.data?.message || "Không thể xóa bài test. Vui lòng thử lại!", "error");
+        }
+    };
 
     // STATE QUẢN LÝ MODAL THÔNG BÁO TÙY CHỈNH
     const [modalConfig, setModalConfig] = useState({
@@ -80,6 +113,7 @@ export default function TeacherUploadTest() {
                     setMaxAttempts('');
                     setVideoExplanationUrl('');
                     setFile(null);
+                    setTestRefresh(prev => prev + 1);
                     navigate('/teacher/overview');
                 }
             );
@@ -91,7 +125,9 @@ export default function TeacherUploadTest() {
     };
 
     return (
-        <div className="bg-white p-8 rounded-3xl border border-pink-100 max-w-2xl shadow-sm relative font-sans select-none">
+        <div className="space-y-8 max-w-3xl font-sans select-none">
+        {/* Card 1: Giao bài test mới bằng file Word */}
+        <div className="bg-white p-8 rounded-3xl border border-pink-100 shadow-sm relative">
             <h2 className="text-lg font-bold mb-2 text-pink-900">Giao bài test mới bằng file Word</h2>
             <p className="text-xs text-slate-400 mb-6">Bài test sẽ được lưu vào cơ sở dữ liệu và gán cho lớp <strong className="text-pink-600">{selectedClass}</strong>.</p>
             
@@ -186,8 +222,65 @@ export default function TeacherUploadTest() {
                     {isSubmitting ? 'Đang xử lý file Word...' : `🚀 Tải lên & Giao bài cho lớp ${selectedClass}`}
                 </button>
             </form>
+        </div>
 
-            {/* CUSTOM MODAL THÔNG BÁO THAY THẾ CHO ALERT TRÌNH DUYỆT */}
+        {/* Card 2: Danh sách bài test đã giao - Hỗ trợ Xóa khi giáo viên giao nhầm */}
+        <div className="bg-white p-8 rounded-3xl border border-pink-100 shadow-sm">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6 border-b border-pink-100 pb-4">
+                <div>
+                    <h3 className="text-base font-black text-pink-900 flex items-center gap-2">
+                        <span>📋</span>
+                        <span>Bài test đã giao cho lớp {selectedClass}</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                        Nếu giao lộn đề thi hoặc nhầm lớp, bạn có thể bấm nút <strong className="text-rose-600">"Xóa bài"</strong> bên dưới để hủy bài ngay.
+                    </p>
+                </div>
+                <span className="text-xs font-bold bg-pink-50 text-pink-700 px-3 py-1 rounded-xl border border-pink-200">
+                    {recentTests.length} bài test
+                </span>
+            </div>
+
+            {isLoadingTests ? (
+                <div className="text-center py-8 text-xs font-bold text-pink-600">
+                    Đang tải danh sách bài test...
+                </div>
+            ) : recentTests.length === 0 ? (
+                <div className="text-center py-8 text-xs text-slate-400 italic bg-pink-50/30 rounded-2xl border border-pink-100">
+                    Lớp này hiện chưa có bài test nào được giao.
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {recentTests.map((t) => (
+                        <div 
+                            key={t.id}
+                            className="p-4 rounded-2xl bg-pink-50/30 border border-pink-100 hover:border-pink-200 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+                        >
+                            <div>
+                                <h4 className="text-xs font-extrabold text-slate-800">{t.title}</h4>
+                                <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-1">
+                                    <span>⏱ {t.duration} phút</span>
+                                    <span>•</span>
+                                    <span>{t.deadline ? `Hạn: ${new Date(t.deadline).toLocaleString()}` : 'Không giới hạn thời hạn'}</span>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => handleDeleteAssignedTest(t.id, t.title)}
+                                className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap self-end sm:self-auto"
+                                title="Xóa bài test này nếu đã lỡ giao nhầm"
+                            >
+                                <span>🗑️</span>
+                                <span>Xóa bài (Giao nhầm)</span>
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+
+        {/* CUSTOM MODAL THÔNG BÁO THAY THẾ CHO ALERT TRÌNH DUYỆT */}
             {modalConfig.isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
                     <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl border border-pink-100 text-center transform transition-all">

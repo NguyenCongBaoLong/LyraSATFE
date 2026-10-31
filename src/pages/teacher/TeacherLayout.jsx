@@ -70,7 +70,7 @@ export default function TeacherLayout() {
                             aria-current={isActive('/teacher/overview') ? 'page' : undefined}
                             className={`w-full text-left px-4 py-3 rounded-2xl font-semibold transition text-sm ${isActive('/teacher/overview') ? 'bg-pink-500 text-white font-bold shadow-md shadow-pink-500/20' : 'text-slate-500 hover:bg-pink-50 hover:text-pink-600'}`}
                         >
-                             Tổng quan lớp học
+                             📊 Tổng quan & Quản lý bài test
                         </button>
                         <button 
                             onClick={() => navigate('/teacher/students')} 
@@ -84,7 +84,7 @@ export default function TeacherLayout() {
                             aria-current={isActive('/teacher/upload') ? 'page' : undefined}
                             className={`w-full text-left px-4 py-3 rounded-2xl font-semibold transition text-sm ${isActive('/teacher/upload') ? 'bg-pink-500 text-white font-bold shadow-md shadow-pink-500/20' : 'text-slate-500 hover:bg-pink-50 hover:text-pink-600'}`}
                         >
-                             Tải lên bài test
+                             📝 Giao bài & Xóa bài nhầm
                         </button>
                         <button 
                             onClick={() => navigate('/teacher/vocab-upload')} 
