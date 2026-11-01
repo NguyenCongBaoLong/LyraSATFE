@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Check, MessageSquare } from 'lucide-react';
+import { Bell, Check } from 'lucide-react';
 import api from '../api';
 
 const formatRelativeTime = (dateStr) => {
@@ -22,20 +22,36 @@ export default function NotificationBell({ className = '', align = 'right' }) {
     const [notifications, setNotifications] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [loadError, setLoadError] = useState('');
+    const [countError, setCountError] = useState(false);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
 
     const user = JSON.parse(localStorage.getItem('user')) || {};
     const userId = user.id;
 
+    // Icon theo loại thông báo do backend trả về
+    const iconForType = (type) => {
+        switch (type) {
+            case 'test_submission': return '📝';
+            case 'test_assigned': return '📚';
+            case 'comment_reply': return '↩️';
+            case 'question_comment': return '💬';
+            default: return '🔔';
+        }
+    };
+
     // 1. Tải số lượng chưa đọc định kỳ
     const fetchUnreadCount = useCallback(async () => {
         if (!userId) return;
         try {
             const res = await api.get(`/notifications/unread-count?userId=${userId}`);
-            setUnreadCount(res.data.unreadCount || 0);
-        } catch {
-            // Ignore background error
+            setUnreadCount(res.data?.unreadCount || 0);
+            setCountError(false);
+        } catch (err) {
+            // Không nuốt lỗi im lặng: đánh dấu để chuông hiện trạng thái lỗi
+            console.error('Lỗi tải số thông báo chưa đọc:', err);
+            setCountError(true);
         }
     }, [userId]);
 
@@ -45,9 +61,15 @@ export default function NotificationBell({ className = '', align = 'right' }) {
 
         api.get(`/notifications/unread-count?userId=${userId}`)
             .then(res => {
-                if (isMounted) setUnreadCount(res.data.unreadCount || 0);
+                if (isMounted) {
+                    setUnreadCount(res.data?.unreadCount || 0);
+                    setCountError(false);
+                }
             })
-            .catch(() => {});
+            .catch((err) => {
+                console.error('Lỗi tải số thông báo chưa đọc:', err);
+                if (isMounted) setCountError(true);
+            });
 
         const interval = setInterval(fetchUnreadCount, 15000); // 15s fast polling
         return () => {
@@ -60,11 +82,14 @@ export default function NotificationBell({ className = '', align = 'right' }) {
     const fetchNotifications = async () => {
         if (!userId) return;
         setIsLoading(true);
+        setLoadError('');
         try {
             const res = await api.get(`/notifications?userId=${userId}&page=1&pageSize=15`);
-            setNotifications(res.data.items || []);
+            setNotifications(res.data?.items || []);
         } catch (err) {
             console.error('Lỗi tải thông báo:', err);
+            setNotifications([]);
+            setLoadError('Không tải được thông báo. Kiểm tra kết nối rồi thử lại.');
         } finally {
             setIsLoading(false);
         }
@@ -108,16 +133,22 @@ export default function NotificationBell({ className = '', align = 'right' }) {
                 setUnreadCount(prev => Math.max(0, prev - 1));
                 setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
             }
+        } catch (err) {
+            console.error('Lỗi khi đánh dấu đã đọc:', err);
+        } finally {
             setIsOpen(false);
-
-            // Điều hướng đến bài test / điểm số
-            if (user.role === 'Student') {
-                navigate('/score');
+            // Điều hướng theo loại thông báo
+            if (user.role === 'Admin') {
+                navigate('/admin/dashboard');
             } else if (user.role === 'Teacher') {
                 navigate('/teacher/overview');
+            } else if (notif.type === 'test_assigned' && notif.testId) {
+                navigate(`/test/${notif.testId}`);
+            } else if (notif.type === 'test_submission') {
+                navigate('/score');
+            } else {
+                navigate('/mission');
             }
-        } catch (err) {
-            console.error('Lỗi khi xử lý thông báo:', err);
         }
     };
 
@@ -134,6 +165,12 @@ export default function NotificationBell({ className = '', align = 'right' }) {
                     <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-5 h-5 flex items-center justify-center shadow-md animate-pulse">
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
+                )}
+                {unreadCount === 0 && countError && (
+                    <span
+                        className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-400 border-2 border-white shadow-sm"
+                        title="Không tải được số thông báo chưa đọc"
+                    />
                 )}
             </button>
 
@@ -164,13 +201,27 @@ export default function NotificationBell({ className = '', align = 'right' }) {
                             <div className="p-8 text-center text-xs text-slate-400 font-medium">
                                 Đang tải thông báo...
                             </div>
+                        ) : loadError ? (
+                            <div className="p-8 text-center">
+                                <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-2 text-amber-500">
+                                    ⚠️
+                                </div>
+                                <p className="text-xs font-bold text-slate-600">{loadError}</p>
+                                <button
+                                    type="button"
+                                    onClick={fetchNotifications}
+                                    className="mt-3 text-[11px] font-bold text-pink-600 hover:text-pink-800 underline cursor-pointer"
+                                >
+                                    Thử lại
+                                </button>
+                            </div>
                         ) : notifications.length === 0 ? (
                             <div className="p-8 text-center">
                                 <div className="w-12 h-12 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-2 text-pink-400">
                                     <Bell className="w-6 h-6 opacity-40" />
                                 </div>
                                 <p className="text-xs font-bold text-slate-500">Chưa có thông báo nào</p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Bạn sẽ nhận thông báo khi có người trả lời câu hỏi</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Bạn sẽ nhận thông báo khi có người trả lời câu hỏi hoặc lớp có đề mới</p>
                             </div>
                         ) : (
                             notifications.map((n) => (
@@ -182,7 +233,7 @@ export default function NotificationBell({ className = '', align = 'right' }) {
                                     }`}
                                 >
                                     <div className="w-8 h-8 rounded-full bg-pink-100 text-pink-700 flex items-center justify-center shrink-0 mt-0.5 text-sm">
-                                        {n.type === 'test_submission' ? '📝' : n.type === 'comment_reply' ? '↩️' : '💬'}
+                                        {iconForType(n.type)}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-1 mb-0.5">

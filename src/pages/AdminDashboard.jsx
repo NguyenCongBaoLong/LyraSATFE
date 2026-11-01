@@ -10,6 +10,7 @@ import CreateClassCard from '../components/admin/CreateClassCard';
 import ClassListCard from '../components/admin/ClassListCard';
 import ClassDetailModal from '../components/admin/ClassDetailModal';
 import AlertModal from '../components/admin/AlertModal';
+import NotificationBell from '../components/NotificationBell';
 import LogoutButton from '../components/LogoutButton';
 
 export default function AdminDashboard() {
@@ -438,6 +439,7 @@ export default function AdminDashboard() {
                         <div className="bg-pink-50 border border-pink-200 px-4 py-2 rounded-2xl text-xs font-bold text-pink-700">
                             Quản trị viên
                         </div>
+                        <NotificationBell />
                         <LogoutButton className="px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold rounded-2xl transition cursor-pointer" />
                     </div>
                 </div>
