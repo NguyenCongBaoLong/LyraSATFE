@@ -41,6 +41,17 @@ const formatRelativeTime = (dateInput) => {
 
 // Real comments are loaded from backend API
 
+// API trả userName/userRole/isLikedByMe, component dùng authorName/authorRole/isLiked.
+// Thiếu bước map này thì mọi bình luận tải từ server hiện "Người dùng" + nhãn "Học viên",
+// kể cả bình luận của giáo viên, và nút tim luôn hiển thị sai trạng thái.
+const normalizeComment = (c) => ({
+    ...c,
+    authorName: c.authorName ?? c.userName ?? 'Người dùng',
+    authorRole: c.authorRole ?? c.userRole ?? 'Student',
+    isLiked: c.isLiked ?? c.isLikedByMe ?? false,
+    replies: (c.replies || []).map(normalizeComment)
+});
+
 export default function QuestionDiscussion({
     questionId,
     questionIndex,
@@ -68,6 +79,7 @@ export default function QuestionDiscussion({
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const [loadError, setLoadError] = useState('');
 
     // Root composer state
     const [newCommentText, setNewCommentText] = useState('');
@@ -127,31 +139,37 @@ export default function QuestionDiscussion({
     }
 
     // Load comments for active question
-    useEffect(() => {
-        let isCurrent = true;
-        if (!questionId) {
-            return;
+    const loadComments = useCallback(async () => {
+        if (!questionId) return;
+        setLoading(true);
+        setLoadError('');
+        try {
+            const userParam = currentUser?.id ? `?userId=${currentUser.id}` : '';
+            const res = await api.get(`/comments/question/${questionId}${userParam}`);
+            const data = Array.isArray(res.data) ? res.data : (res.data?.comments || []);
+            setComments(data.map(normalizeComment));
+        } catch (err) {
+            console.error('Lỗi tải bình luận:', err);
+            // Không được giả vờ "chưa có bình luận nào" khi API lỗi
+            setLoadError('Không tải được bình luận. Kiểm tra kết nối rồi thử lại.');
+        } finally {
+            setLoading(false);
         }
+    }, [questionId, currentUser]);
 
-        const userParam = currentUser?.id ? `?userId=${currentUser.id}` : '';
-        api.get(`/comments/question/${questionId}${userParam}`)
-            .then(res => {
-                if (!isCurrent) return;
-                const data = Array.isArray(res.data) ? res.data : (res.data?.comments || []);
-                setComments(data);
-                setLoading(false);
-            })
-            .catch((err) => {
-                if (!isCurrent) return;
-                console.warn('Lỗi tải bình luận:', err);
-                setComments([]);
-                setLoading(false);
-            });
+    useEffect(() => {
+        if (!questionId) return;
+        loadComments();
+    }, [questionId, loadComments]);
 
-        return () => {
-            isCurrent = false;
+    // Tải lại khi người dùng quay lại tab/app, để thấy phản hồi mới của giáo viên
+    useEffect(() => {
+        const handleVisible = () => {
+            if (document.visibilityState === 'visible') loadComments();
         };
-    }, [questionId]);
+        document.addEventListener('visibilitychange', handleVisible);
+        return () => document.removeEventListener('visibilitychange', handleVisible);
+    }, [loadComments]);
 
     // Submit new root comment
     const handleAddComment = async (e) => {
@@ -359,9 +377,14 @@ export default function QuestionDiscussion({
         setEditText('');
 
         try {
-            await api.put(`/comments/${commentId}`, { content: trimmed });
+            await api.put(`/comments/${commentId}`, {
+                userId: currentUser?.id ?? currentUser?.userId,
+                content: trimmed
+            });
         } catch (err) {
-            console.warn('API edit comment failed:', err);
+            console.error('Lỗi sửa bình luận:', err);
+            alert(err.response?.data?.message || 'Không sửa được bình luận. Vui lòng thử lại!');
+            loadComments();
         }
     };
 
@@ -537,6 +560,20 @@ export default function QuestionDiscussion({
                 <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
                     <Loader2 className="w-6 h-6 animate-spin text-pink-500" />
                     <span className="text-xs font-medium">Đang tải thảo luận...</span>
+                </div>
+            ) : loadError ? (
+                <div className="text-center py-10 px-4 rounded-2xl bg-amber-50 border border-amber-200">
+                    <div className="w-12 h-12 rounded-full bg-white text-amber-500 flex items-center justify-center mx-auto mb-2 shadow-sm border border-amber-100">
+                        <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <p className="text-sm font-bold text-slate-700 mb-1">{loadError}</p>
+                    <button
+                        type="button"
+                        onClick={loadComments}
+                        className="mt-3 text-xs font-bold text-pink-600 hover:text-pink-800 underline cursor-pointer"
+                    >
+                        Thử lại
+                    </button>
                 </div>
             ) : sortedComments.length === 0 ? (
                 <div className="text-center py-10 px-4 rounded-2xl bg-pink-50/50 border border-dashed border-pink-200">

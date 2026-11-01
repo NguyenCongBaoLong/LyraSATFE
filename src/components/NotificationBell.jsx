@@ -147,7 +147,8 @@ export default function NotificationBell({ className = '', align = 'right' }) {
             } else if (notif.type === 'test_submission') {
                 navigate('/score');
             } else {
-                navigate('/mission');
+                // Bình luận chỉ hiển thị trong trang lịch sử làm bài (khung xem lại)
+                navigate('/score');
             }
         }
     };
