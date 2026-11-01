@@ -87,7 +87,7 @@ export default function Home() {
                 </div>
 
                 {/* Banner Slide Hình Ảnh */}
-                <div className="w-full h-48 bg-white rounded-3xl overflow-hidden shadow-md mb-8 relative border border-pink-100">
+                <div className="w-full aspect-[3.2/1] bg-white rounded-3xl overflow-hidden shadow-md mb-8 relative border border-pink-100">
                     <div className="w-full h-full relative">
                         <img 
                             src={banners[currentBannerIndex].image} 

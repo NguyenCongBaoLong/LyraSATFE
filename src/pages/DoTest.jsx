@@ -3,6 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { getEmbedYoutubeUrl } from '../utils/youtube';
 import TextHighlighter from '../components/TextHighlighter';
+import scoreImage0To25 from '../assets/0-25.png';
+import scoreImage25To50 from '../assets/25-50.png';
+import scoreImage50To75 from '../assets/50-75.png';
+import scoreImage75To100 from '../assets/75-100.png';
 
 export default function DoTest() {
     const { id } = useParams();
@@ -315,16 +319,26 @@ export default function DoTest() {
     };
 
     if (quizResult) {
+        const score = Number(quizResult.score) || 0;
+        const scoreImage = score < 25
+            ? scoreImage0To25
+            : score < 50
+                ? scoreImage25To50
+                : score < 75
+                    ? scoreImage50To75
+                    : scoreImage75To100;
+        const fruitCount = Math.ceil(score / 10);
+
         return (
             <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex flex-col items-center justify-center font-sans p-6">
                 <div className="bg-white rounded-3xl p-10 max-w-3xl w-full shadow-2xl border border-pink-100 flex flex-col md:flex-row items-center justify-between gap-8 animate-fadeIn">
                     <div className="text-center md:text-left space-y-4 flex-1">
                         <div>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">You've completed</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Bạn đã hoàn thành</p>
                             <h2 className="text-xl font-black text-pink-900 mt-1">{testData.title}</h2>
                         </div>
-                        <div className="w-40 h-40 mx-auto md:mx-0 bg-pink-50 rounded-3xl border border-pink-200 flex items-center justify-center shadow-inner text-6xl">
-                            🐱‍👓
+                        <div className="w-40 h-40 mx-auto md:mx-0 bg-pink-50 rounded-3xl border border-pink-200 flex items-center justify-center shadow-inner overflow-hidden">
+                            <img src={scoreImage} alt={`Kết quả ${score}%`} className="w-full h-full object-contain" />
                         </div>
                     </div>
                     <div className="flex flex-col items-center md:items-end flex-1 space-y-6 text-center md:text-right">
@@ -335,16 +349,16 @@ export default function DoTest() {
                             </div>
                         </div>
                         <div className="text-xs font-bold text-slate-600 flex items-center gap-2 bg-pink-50 px-4 py-2 rounded-2xl border border-pink-100">
-                            <span>You get</span>
-                            <span className="text-pink-600 font-black text-sm">{quizResult.correctCount}</span>
+                            <span>Bạn được</span>
+                            <span className="text-pink-600 font-black text-sm">{fruitCount}</span>
                             <span>🍈</span>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-3 w-full">
                             <button onClick={() => navigate('/score')} className="flex-1 py-3 px-6 bg-pink-600 hover:bg-pink-700 text-white font-extrabold text-xs rounded-2xl shadow-md shadow-pink-600/30 transition">
-                                My score
+                                Bài làm & Thảo luận
                             </button>
                             <button onClick={() => navigate('/mission')} className="flex-1 py-3 px-6 bg-white border border-pink-200 hover:bg-pink-50 text-slate-700 font-extrabold text-xs rounded-2xl transition">
-                                Return to Quiz
+                                Quay lại danh sách nhiệm vụ
                             </button>
                         </div>
                     </div>
