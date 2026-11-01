@@ -35,7 +35,7 @@ export default function Home() {
         const targetDateStr = storedUser.examDate || localStorage.getItem('lyra_exam_date') || '2026-12-05';
         
         const dateObj = new Date(targetDateStr);
-        const formattedDateText = `thg ${dateObj.getMonth() + 1}. ${dateObj.getDate()}, ${dateObj.getFullYear()}`;
+        const formattedDateText = `ngày ${dateObj.getDate()} tháng ${dateObj.getMonth() + 1} năm ${dateObj.getFullYear()}`;
         setExamDateStr(formattedDateText);
 
         // Vòng lặp đếm ngược mỗi giây
@@ -142,7 +142,7 @@ export default function Home() {
                     {/* Next Digital SAT - Ô đếm ngược thời gian thực */}
                     <div className="bg-white p-6 rounded-3xl border border-pink-100 hover:border-pink-300 transition text-center flex flex-col justify-center items-center h-36 shadow-sm col-span-1 md:col-span-2">
                         <div className="text-xs font-bold text-[#2D5A4C] mb-3 tracking-wide">
-                            Next Digital SAT - Exam: {examDateStr}
+                            Next Digital SAT - Kiểm tra: {examDateStr}
                         </div>
                         <div className="grid grid-cols-4 gap-8 text-center">
                             <div>
