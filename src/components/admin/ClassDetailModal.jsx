@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Pagination from '../Pagination';
 
 export default function ClassDetailModal({
@@ -9,9 +9,8 @@ export default function ClassDetailModal({
     classStudentCount,
     onClassStudentPageChange,
     availableStudents,
-    availableStudentPage,
     availableStudentCount,
-    onAvailableStudentPageChange,
+    onLoadMoreAvailableStudents,
     studentToAddId,
     setStudentToAddId,
     isLoadingStudents,
@@ -26,6 +25,8 @@ export default function ClassDetailModal({
     onTransferLeadKey = null,
     onCoordinateClass = null
 }) {
+    const [isStudentDropdownOpen, setIsStudentDropdownOpen] = useState(false);
+
     if (!selectedClass) return null;
 
     const classCode = selectedClass.classCode || selectedClass.ClassCode;
@@ -139,19 +140,64 @@ export default function ClassDetailModal({
                         </h4>
                         <span className="text-[11px] text-slate-400">{availableStudentCount} học sinh</span>
                     </div>
-                    <form onSubmit={onAddStudent} className="p-4 bg-pink-50/50 rounded-2xl border border-pink-100 flex gap-2 items-center">
-                        <select 
-                            value={studentToAddId} 
-                            onChange={(e) => setStudentToAddId(e.target.value)}
-                            className="w-full px-4 py-2.5 bg-white rounded-xl border border-pink-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-400 cursor-pointer"
-                        >
-                            <option value="">-- Chọn học sinh để thêm vào lớp --</option>
-                            {availableStudents.map(s => (
-                                <option key={s.id ?? s.Id} value={s.id ?? s.Id}>
-                                    {s.fullName || s.FullName} ({s.email || s.Email})
-                                </option>
-                            ))}
-                        </select>
+                    <form onSubmit={onAddStudent} className="p-4 bg-pink-50/50 rounded-2xl border border-pink-100 flex gap-2 items-start">
+                        <div className="relative w-full">
+                            <button
+                                type="button"
+                                onClick={() => setIsStudentDropdownOpen(prev => !prev)}
+                                className="w-full px-4 py-2.5 bg-white rounded-xl border border-pink-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-400 cursor-pointer text-left flex items-center justify-between"
+                                aria-expanded={isStudentDropdownOpen}
+                            >
+                                <span className={studentToAddId ? 'text-slate-700' : 'text-slate-400'}>
+                                    {studentToAddId
+                                        ? (() => {
+                                            const selectedStudent = availableStudents.find(s => String(s.id ?? s.Id) === String(studentToAddId));
+                                            return selectedStudent
+                                                ? `${selectedStudent.fullName || selectedStudent.FullName} (${selectedStudent.email || selectedStudent.Email})`
+                                                : '-- Chọn học sinh để thêm vào lớp --';
+                                        })()
+                                        : '-- Chọn học sinh để thêm vào lớp --'}
+                                </span>
+                                <span className="ml-2">▾</span>
+                            </button>
+                            {isStudentDropdownOpen && (
+                                <div
+                                    className="absolute left-0 right-0 top-full z-10 mt-1 max-h-52 overflow-y-auto rounded-xl border border-pink-200 bg-white p-1 shadow-lg"
+                                    onScroll={(e) => {
+                                        const element = e.currentTarget;
+                                        const isNearBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - 24;
+                                        if (isNearBottom && availableStudents.length < availableStudentCount && !isLoadingStudents) {
+                                            onLoadMoreAvailableStudents();
+                                        }
+                                    }}
+                                >
+                                    {availableStudents.map(s => {
+                                        const value = s.id ?? s.Id;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={value}
+                                                onClick={() => {
+                                                    setStudentToAddId(String(value));
+                                                    setIsStudentDropdownOpen(false);
+                                                }}
+                                                className={`block w-full rounded-lg px-3 py-2 text-left text-xs hover:bg-pink-50 ${
+                                                    String(studentToAddId) === String(value) ? 'bg-pink-50 font-bold text-pink-700' : 'text-slate-700'
+                                                }`}
+                                            >
+                                                {s.fullName || s.FullName} ({s.email || s.Email})
+                                            </button>
+                                        );
+                                    })}
+                                    {isLoadingStudents && (
+                                        <p className="px-3 py-2 text-center text-xs text-slate-400">Đang tải thêm...</p>
+                                    )}
+                                    {!isLoadingStudents && availableStudents.length < availableStudentCount && (
+                                        <p className="px-3 py-2 text-center text-[11px] text-slate-400">Cuộn xuống để tải thêm</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                         <button 
                             type="submit" 
                             disabled={!studentToAddId || isLoadingStudents}
@@ -160,14 +206,6 @@ export default function ClassDetailModal({
                             + Thêm
                         </button>
                     </form>
-                    <Pagination
-                        page={availableStudentPage}
-                        pageSize={10}
-                        totalCount={availableStudentCount}
-                        onPageChange={onAvailableStudentPageChange}
-                        itemLabel="học sinh khả dụng"
-                        ariaLabel="Phân trang học sinh khả dụng"
-                    />
                     </div>
 
                     {/* 3. MỤC DANH SÁCH HỌC SINH TRONG LỚP */}

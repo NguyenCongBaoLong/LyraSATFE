@@ -331,6 +331,31 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleLoadMoreAvailableStudents = async () => {
+        if (!selectedClassForStudents || isLoadingStudents || availableStudents.length >= availableStudentCount) return;
+
+        const code = selectedClassForStudents.classCode || selectedClassForStudents.ClassCode;
+        const nextPage = availableStudentPage + 1;
+        setIsLoadingStudents(true);
+        try {
+            const response = await api.get(`/admin/classes/${code}/available-students`, {
+                params: { page: nextPage, pageSize: 10 }
+            });
+            setAvailableStudents(previous => {
+                const existingIds = new Set(previous.map(student => student.id ?? student.Id));
+                const newStudents = response.data.items.filter(student => !existingIds.has(student.id ?? student.Id));
+                return [...previous, ...newStudents];
+            });
+            setAvailableStudentPage(response.data.page);
+            setAvailableStudentCount(response.data.totalCount);
+        } catch (err) {
+            console.error("Lỗi tải thêm danh sách học sinh:", err);
+            showAlert("Lỗi", "Không thể tải thêm danh sách học sinh.", "error");
+        } finally {
+            setIsLoadingStudents(false);
+        }
+    };
+
     // Xử lý Thêm Học Sinh vào Lớp
     const handleAddStudentToClass = async (e) => {
         e.preventDefault();
@@ -550,13 +575,8 @@ export default function AdminDashboard() {
                     }
                 }}
                 availableStudents={availableStudents}
-                availableStudentPage={availableStudentPage}
                 availableStudentCount={availableStudentCount}
-                onAvailableStudentPageChange={nextPage => {
-                    if (selectedClassForStudents) {
-                        handleOpenClassStudents(selectedClassForStudents, classStudentPage, nextPage);
-                    }
-                }}
+                onLoadMoreAvailableStudents={handleLoadMoreAvailableStudents}
                 studentToAddId={studentToAddId}
                 setStudentToAddId={setStudentToAddId}
                 isLoadingStudents={isLoadingStudents}
