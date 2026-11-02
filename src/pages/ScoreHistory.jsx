@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../api';
 import StudentSidebar from '../components/StudentSidebar';
 import Pagination from '../components/Pagination';
@@ -16,6 +17,9 @@ export default function ScoreHistory() {
     const [totalCount, setTotalCount] = useState(0);
     const [isLoadingHistory, setIsLoadingHistory] = useState(true);
     const [historyError, setHistoryError] = useState('');
+    const [focusCommentId, setFocusCommentId] = useState(null);
+    const [searchParams] = useSearchParams();
+    const deepLinkHandledRef = useRef(false);
     
     // State quản lý Modal xem lại bài làm (Review)
     const [reviewData, setReviewData] = useState(null);
@@ -57,13 +61,18 @@ export default function ScoreHistory() {
     }, [debouncedSearchTerm, page, user.id]);
 
     // Gọi API lấy thông tin chi tiết bài nộp để xem lại
-    const handleOpenReview = async (submissionId, openVideoDirectly = false) => {
+    const handleOpenReview = async (submissionId, openVideoDirectly = false, targetQuestionId = null) => {
         setIsLoadingReview(true);
         try {
             const res = await api.get(`/submissions/${submissionId}/review`);
             setReviewData(res.data);
-            setCurrentReviewIndex(0);
             setIsViewingVideo(openVideoDirectly);
+
+            // Nhảy thẳng tới đúng câu hỏi khi mở từ thông báo bình luận.
+            const targetIndex = targetQuestionId
+                ? (res.data?.questions || []).findIndex(q => String(q.id) === String(targetQuestionId))
+                : -1;
+            setCurrentReviewIndex(targetIndex >= 0 ? targetIndex : 0);
         } catch (err) {
             console.error("Lỗi tải chi tiết bài làm:", err);
             alert("Không thể tải chi tiết bài làm!");
@@ -71,6 +80,29 @@ export default function ScoreHistory() {
             setIsLoadingReview(false);
         }
     };
+
+    // Deep-link từ thông báo: mở đúng bài nộp của đề, nhảy đúng câu hỏi và bình luận.
+    useEffect(() => {
+        if (deepLinkHandledRef.current) return;
+        const testIdParam = searchParams.get('testId');
+        if (!testIdParam || !user.id) return;
+
+        deepLinkHandledRef.current = true;
+        const questionIdParam = searchParams.get('questionId');
+        const commentIdParam = searchParams.get('commentId');
+        if (commentIdParam) setFocusCommentId(commentIdParam);
+
+        api.get(`/submissions/history/${user.id}`, {
+            params: { testId: testIdParam, page: 1, pageSize: 1 }
+        })
+            .then(res => {
+                const item = res.data?.items?.[0];
+                if (item) {
+                    handleOpenReview(item.id, false, questionIdParam);
+                }
+            })
+            .catch(err => console.error('Lỗi mở bài làm từ thông báo:', err));
+    }, [searchParams, user.id]);
 
     const currentQ = reviewData?.questions?.[currentReviewIndex];
 
@@ -387,6 +419,7 @@ export default function ScoreHistory() {
                                         <QuestionDiscussion 
                                             questionId={currentQ.id} 
                                             testTitle={reviewData.testTitle} 
+                                            focusCommentId={focusCommentId}
                                         />
                                     </div>
 

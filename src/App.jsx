@@ -9,6 +9,7 @@ import VocabList from './pages/VocabList';
 import MyAccount from './pages/MyAccount';
 import DoTest from './pages/DoTest';
 import AdminDashboard from './pages/AdminDashboard';
+import Notifications from './pages/Notifications';
 
 // Các trang của giảng viên sau khi tách
 import TeacherLayout from './pages/teacher/TeacherLayout';
@@ -29,6 +30,7 @@ function App() {
         <Route path="/vocab" element={<VocabList />} />
         {/* <Route path="/vocab/study/:seriesName" element={<VocabStudy />} /> 3. Route học chi tiết bộ từ vựng */}
         <Route path="/account" element={<MyAccount />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/test/:id" element={<DoTest />} />
 
         {/* Khung giao diện quản lý của Giảng viên (Layout chung Sidebar + Outlet) */}

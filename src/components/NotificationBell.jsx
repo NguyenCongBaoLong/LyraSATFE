@@ -2,20 +2,14 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check } from 'lucide-react';
 import api from '../api';
+import {
+    formatRelativeTime,
+    iconForNotificationType as iconForType,
+    buildNotificationTarget
+} from '../utils/notificationTarget';
 
-const formatRelativeTime = (dateStr) => {
-    if (!dateStr) return '';
-    const utcStr = dateStr.endsWith('Z') || dateStr.includes('+') ? dateStr : `${dateStr}Z`;
-    const date = new Date(utcStr);
-    const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
-    if (diffSec < 60) return 'vừa xong';
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin} phút trước`;
-    const diffHour = Math.floor(diffMin / 60);
-    if (diffHour < 24) return `${diffHour} giờ trước`;
-    const diffDay = Math.floor(diffHour / 24);
-    return `${diffDay} ngày trước`;
-};
+// Dropdown chỉ hiện một lượng thông báo nhất định; phần còn lại xem ở trang /notifications.
+const DROPDOWN_LIMIT = 8;
 
 export default function NotificationBell({ className = '', align = 'right' }) {
     const [unreadCount, setUnreadCount] = useState(0);
@@ -29,17 +23,6 @@ export default function NotificationBell({ className = '', align = 'right' }) {
 
     const user = JSON.parse(localStorage.getItem('user')) || {};
     const userId = user.id;
-
-    // Icon theo loại thông báo do backend trả về
-    const iconForType = (type) => {
-        switch (type) {
-            case 'test_submission': return '📝';
-            case 'test_assigned': return '📚';
-            case 'comment_reply': return '↩️';
-            case 'question_comment': return '💬';
-            default: return '🔔';
-        }
-    };
 
     // 1. Tải số lượng chưa đọc định kỳ
     const fetchUnreadCount = useCallback(async () => {
@@ -84,7 +67,7 @@ export default function NotificationBell({ className = '', align = 'right' }) {
         setIsLoading(true);
         setLoadError('');
         try {
-            const res = await api.get(`/notifications?userId=${userId}&page=1&pageSize=15`);
+            const res = await api.get(`/notifications?userId=${userId}&page=1&pageSize=${DROPDOWN_LIMIT}`);
             setNotifications(res.data?.items || []);
         } catch (err) {
             console.error('Lỗi tải thông báo:', err);
@@ -137,19 +120,10 @@ export default function NotificationBell({ className = '', align = 'right' }) {
             console.error('Lỗi khi đánh dấu đã đọc:', err);
         } finally {
             setIsOpen(false);
-            // Điều hướng theo loại thông báo
-            if (user.role === 'Admin') {
-                navigate('/admin/dashboard');
-            } else if (user.role === 'Teacher') {
-                navigate('/teacher/overview');
-            } else if (notif.type === 'test_assigned' && notif.testId) {
-                navigate(`/test/${notif.testId}`);
-            } else if (notif.type === 'test_submission') {
-                navigate('/score');
-            } else {
-                // Bình luận chỉ hiển thị trong trang lịch sử làm bài (khung xem lại)
-                navigate('/score');
-            }
+            // Điều hướng tới đúng màn hình nghiệp vụ, kèm tham số để trang đích tự mở
+            // đúng bài nộp / đúng câu hỏi / đúng bình luận.
+            const target = buildNotificationTarget(notif, user.role);
+            if (target) navigate(target);
         }
     };
 
@@ -256,6 +230,17 @@ export default function NotificationBell({ className = '', align = 'right' }) {
                             ))
                         )}
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setIsOpen(false);
+                            navigate('/notifications');
+                        }}
+                        className="w-full py-3 text-xs font-bold text-pink-600 hover:bg-pink-50 border-t border-pink-100 transition cursor-pointer"
+                    >
+                        Xem tất cả thông báo
+                    </button>
                 </div>
             )}
         </div>

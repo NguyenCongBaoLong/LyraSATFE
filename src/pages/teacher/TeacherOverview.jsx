@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useOutletContext, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useOutletContext, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../api';
 import Pagination from '../../components/Pagination';
 import QuestionDiscussion from '../../components/QuestionDiscussion';
@@ -31,6 +31,12 @@ export default function TeacherOverview() {
     const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
     const [isViewingVideo, setIsViewingVideo] = useState(false);
     const [isLoadingReview, setIsLoadingReview] = useState(false);
+    const [focusCommentId, setFocusCommentId] = useState(null);
+
+    // Deep-link từ thông báo (giáo viên)
+    const [searchParams] = useSearchParams();
+    const [pendingDeepLink, setPendingDeepLink] = useState(null);
+    const deepLinkHandledRef = useRef(false);
 
     const handleDeleteTest = async (testId, testTitle) => {
         if (!window.confirm(`Bạn có chắc chắn muốn xóa bài test "${testTitle}" không? Toàn bộ câu hỏi, bài làm và điểm số của học sinh trong bài test này sẽ bị xóa.`)) {
@@ -53,13 +59,18 @@ export default function TeacherOverview() {
         }
     };
 
-    const handleOpenReview = async (submissionId) => {
+    const handleOpenReview = async (submissionId, targetQuestionId = null) => {
         setIsLoadingReview(true);
         try {
             const res = await api.get(`/submissions/${submissionId}/review`);
             setReviewData(res.data);
-            setCurrentReviewIndex(0);
             setIsViewingVideo(false);
+
+            // Nhảy thẳng tới đúng câu hỏi khi mở từ thông báo bình luận.
+            const targetIndex = targetQuestionId
+                ? (res.data?.questions || []).findIndex(q => String(q.id) === String(targetQuestionId))
+                : -1;
+            setCurrentReviewIndex(targetIndex >= 0 ? targetIndex : 0);
         } catch (err) {
             console.error("Lỗi tải chi tiết bài làm:", err);
             alert("Không thể tải chi tiết bài làm!");
@@ -136,6 +147,44 @@ export default function TeacherOverview() {
             controller.abort();
         };
     }, [selectedTest, submissionPage]);
+
+    // Deep-link: tự chọn đúng đề khi bấm thông báo.
+    useEffect(() => {
+        if (deepLinkHandledRef.current) return;
+        const testIdParam = searchParams.get('testId');
+        if (!testIdParam) return;
+
+        deepLinkHandledRef.current = true;
+        const studentIdParam = searchParams.get('studentId');
+        const questionIdParam = searchParams.get('questionId');
+        const commentIdParam = searchParams.get('commentId');
+        if (commentIdParam) setFocusCommentId(commentIdParam);
+
+        setIsLoadingDetail(true);
+        api.get(`/tests/${testIdParam}`)
+            .then(res => {
+                setSelectedTest({ id: res.data.id, title: res.data.title, duration: res.data.duration });
+                setPendingDeepLink({ studentId: studentIdParam, questionId: questionIdParam });
+            })
+            .catch(err => {
+                console.error('Lỗi mở đề từ thông báo:', err);
+                setIsLoadingDetail(false);
+            });
+    }, [searchParams]);
+
+    // Khi danh sách bài nộp đã tải xong thì mở đúng bài của học sinh (hoặc bài mới nhất).
+    useEffect(() => {
+        if (!pendingDeepLink) return;
+        if (!testSubmissions.length) return;
+
+        const match = pendingDeepLink.studentId
+            ? testSubmissions.find(s => String(s.studentId) === String(pendingDeepLink.studentId))
+            : testSubmissions[0];
+
+        const questionId = pendingDeepLink.questionId;
+        setPendingDeepLink(null);
+        if (match) handleOpenReview(match.id, questionId);
+    }, [pendingDeepLink, testSubmissions]);
 
     const handleViewTestDetail = (test) => {
         setTestSubmissions([]);
@@ -552,6 +601,7 @@ export default function TeacherOverview() {
                                         <QuestionDiscussion 
                                             questionId={currentQ.id} 
                                             testTitle={reviewData.testTitle} 
+                                            focusCommentId={focusCommentId}
                                         />
                                     </div>
 

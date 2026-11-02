@@ -57,6 +57,7 @@ export default function QuestionDiscussion({
     questionIndex,
     testTitle,
     currentUser: propUser,
+    focusCommentId = null,
     className = ''
 }) {
     // Current user resolution
@@ -99,6 +100,9 @@ export default function QuestionDiscussion({
         isReply: false,
         parentCommentId: null
     });
+
+    // Bình luận đang được làm nổi bật khi mở từ thông báo
+    const [highlightedId, setHighlightedId] = useState(null);
 
     // Check teacher or admin permissions
     const isTeacherOrAdmin = currentUser?.role === 'Teacher' || currentUser?.role === 'Admin';
@@ -170,6 +174,27 @@ export default function QuestionDiscussion({
         document.addEventListener('visibilitychange', handleVisible);
         return () => document.removeEventListener('visibilitychange', handleVisible);
     }, [loadComments]);
+
+    // Cuộn tới và làm nổi bật bình luận được mở từ thông báo.
+    useEffect(() => {
+        if (!focusCommentId) return;
+        const targetId = String(focusCommentId);
+        if (!comments.some(c => String(c.id) === targetId || (c.replies || []).some(r => String(r.id) === targetId))) {
+            return;
+        }
+
+        setHighlightedId(targetId);
+        const timer = setTimeout(() => {
+            const el = document.getElementById(`comment-${targetId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 120);
+        const clearTimer = setTimeout(() => setHighlightedId(null), 4000);
+
+        return () => {
+            clearTimeout(timer);
+            clearTimeout(clearTimer);
+        };
+    }, [focusCommentId, comments]);
 
     // Submit new root comment
     const handleAddComment = async (e) => {
@@ -590,10 +615,13 @@ export default function QuestionDiscussion({
                     {sortedComments.map(comment => (
                         <div
                             key={comment.id}
+                            id={`comment-${comment.id}`}
                             className={`rounded-2xl border transition-all p-4 ${
-                                comment.isPinned
-                                    ? 'bg-pink-50/40 border-pink-300 ring-1 ring-pink-300/60 shadow-sm'
-                                    : 'bg-white border-slate-100 hover:border-pink-100 shadow-xs'
+                                String(highlightedId) === String(comment.id)
+                                    ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-300 shadow-md'
+                                    : comment.isPinned
+                                        ? 'bg-pink-50/40 border-pink-300 ring-1 ring-pink-300/60 shadow-sm'
+                                        : 'bg-white border-slate-100 hover:border-pink-100 shadow-xs'
                             }`}
                         >
                             {/* Pinned Header Badge */}
@@ -787,7 +815,12 @@ export default function QuestionDiscussion({
                                     {comment.replies.map(reply => (
                                         <div
                                             key={reply.id}
-                                            className="bg-slate-50/70 rounded-xl p-3 border border-slate-100/90 text-xs"
+                                            id={`comment-${reply.id}`}
+                                            className={`bg-slate-50/70 rounded-xl p-3 border text-xs ${
+                                                String(highlightedId) === String(reply.id)
+                                                    ? 'border-amber-400 ring-2 ring-amber-300 bg-amber-50'
+                                                    : 'border-slate-100/90'
+                                            }`}
                                         >
                                             {/* Reply Header */}
                                             <div className="flex items-center justify-between gap-2">
