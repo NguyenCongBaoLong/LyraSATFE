@@ -33,9 +33,9 @@ export default function ClassDetailModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-fadeIn p-4 font-sans select-none">
-            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border border-pink-100 relative max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border border-pink-100 relative max-h-[90vh] overflow-hidden flex flex-col">
                 {/* Header Modal */}
-                <div className="flex justify-between items-center mb-6 pb-4 border-b border-pink-100">
+                <div className="flex justify-between items-center mb-6 pb-4 border-b border-pink-100 shrink-0">
                     <div>
                         <span className="font-black text-pink-600 bg-pink-100 px-3 py-1 rounded-xl text-xs uppercase mr-2">
                             {classCode}
@@ -52,8 +52,9 @@ export default function ClassDetailModal({
                     </button>
                 </div>
 
-                {/* 1. MỤC QUẢN LÝ GIÁO VIÊN PHỤ TRÁCH (HỖ TRỢ 2-4 GIÁO VIÊN) */}
-                <div className="mb-6 p-4 bg-pink-50/40 rounded-2xl border border-pink-100">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+                    {/* 1. MỤC QUẢN LÝ GIÁO VIÊN PHỤ TRÁCH (HỖ TRỢ 2-4 GIÁO VIÊN) */}
+                    <div className="mb-6 p-4 bg-pink-50/40 rounded-2xl border border-pink-100">
                     <div className="flex justify-between items-center mb-3">
                         <h4 className="text-xs font-bold uppercase text-pink-800 flex items-center gap-1.5">
                             <span>👩‍🏫</span>
@@ -128,10 +129,10 @@ export default function ClassDetailModal({
                             </button>
                         </form>
                     )}
-                </div>
+                    </div>
 
-                {/* 2. MỤC HỌC SINH CÓ THỂ THÊM VÀO LỚP */}
-                <div className="mb-6">
+                    {/* 2. MỤC HỌC SINH CÓ THỂ THÊM VÀO LỚP */}
+                    <div className="mb-6">
                     <div className="flex justify-between items-center mb-2">
                         <h4 className="text-xs font-bold uppercase text-slate-400">
                             Học sinh có thể thêm vào lớp
@@ -167,10 +168,10 @@ export default function ClassDetailModal({
                         itemLabel="học sinh khả dụng"
                         ariaLabel="Phân trang học sinh khả dụng"
                     />
-                </div>
+                    </div>
 
-                {/* 3. MỤC DANH SÁCH HỌC SINH TRONG LỚP */}
-                <div>
+                    {/* 3. MỤC DANH SÁCH HỌC SINH TRONG LỚP */}
+                    <div>
                     <div className="flex justify-between items-center mb-3">
                         <h4 className="text-xs font-bold uppercase text-slate-400">
                             Danh sách học sinh trong lớp ({classStudentCount})
@@ -208,9 +209,10 @@ export default function ClassDetailModal({
                             ariaLabel="Phân trang học sinh trong lớp"
                         />
                     )}
+                    </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-pink-100 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div className="mt-6 pt-4 border-t border-pink-100 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
                     {onCoordinateClass && (
                         <button 
                             type="button"
