@@ -5,7 +5,7 @@ import StudentSidebar from '../components/StudentSidebar';
 import Pagination from '../components/Pagination';
 import QuestionDiscussion from '../components/QuestionDiscussion';
 import NotificationBell from '../components/NotificationBell';
-import { getEmbedYoutubeUrl } from '../utils/youtube';
+import VideoPlayer from '../components/VideoPlayer';
 
 const PAGE_SIZE = 8;
 
@@ -302,16 +302,11 @@ export default function ScoreHistory() {
                                         </div>
                                     </div>
 
-                                    {/* Video YouTube Embed sắc nét */}
-                                    <div className="relative aspect-video w-full rounded-3xl overflow-hidden shadow-xl bg-black border-2 border-pink-200">
-                                        <iframe
-                                            src={getEmbedYoutubeUrl(reviewData.videoExplanationUrl)}
-                                            title="Video chữa đề thi ở cuối bài"
-                                            className="w-full h-full"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                            allowFullScreen
-                                        />
-                                    </div>
+                                    {/* Video chữa đề: YouTube, Google Drive hoặc file tải lên server */}
+                                    <VideoPlayer
+                                        url={reviewData.videoExplanationUrl}
+                                        title="Video chữa đề thi ở cuối bài"
+                                    />
 
                                     <div className="flex justify-between items-center pt-4 border-t border-pink-100">
                                         <button
@@ -365,15 +360,11 @@ export default function ScoreHistory() {
                                                         Video giải thích riêng câu này (YouTube)
                                                     </span>
                                                 </div>
-                                                <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-xs bg-black">
-                                                    <iframe
-                                                        src={getEmbedYoutubeUrl(currentQ.videoExplanationUrl)}
-                                                        title="Video giải thích câu hỏi"
-                                                        className="w-full h-full"
-                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                        allowFullScreen
-                                                    />
-                                                </div>
+                                                <VideoPlayer
+                                                    url={currentQ.videoExplanationUrl}
+                                                    title="Video giải thích câu hỏi"
+                                                    className="!rounded-xl"
+                                                />
                                             </div>
                                         )}
 

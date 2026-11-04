@@ -10,4 +10,7 @@ const api = axios.create({
     baseURL: `${apiUrl.replace(/\/+$/, '')}/api`,
 });
 
+// Dùng để dựng URL tuyệt đối cho file tĩnh backend trả về (/uploads/...).
+export const API_ORIGIN = apiUrl.replace(/\/+$/, '');
+
 export default api;

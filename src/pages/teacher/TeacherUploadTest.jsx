@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import api from '../../api';
+import TestVideoModal from '../../components/TestVideoModal';
 
 export default function TeacherUploadTest() {
     const { selectedClass } = useOutletContext();
@@ -19,6 +20,9 @@ export default function TeacherUploadTest() {
     const [recentTests, setRecentTests] = useState([]);
     const [isLoadingTests, setIsLoadingTests] = useState(false);
     const [testRefresh, setTestRefresh] = useState(0);
+
+    // Đề đang mở hộp thoại gắn video chữa bài (thêm video SAU khi đã up đề)
+    const [videoTest, setVideoTest] = useState(null);
 
     useEffect(() => {
         if (!selectedClass) return;
@@ -200,6 +204,7 @@ export default function TeacherUploadTest() {
                         className="w-full px-4 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
                     />
                     <p className="text-[11px] text-slate-400 mt-1">
+                        Có thể bỏ trống và gắn video sau: vào danh sách <strong>Bài test đã giao</strong> bên dưới, bấm nút <strong>🎬 Video chữa bài</strong>.
                         Học sinh sẽ xem được video này ở cuối bài sau khi hoàn thành hoặc nộp bài test.
                     </p>
                 </div>
@@ -258,27 +263,60 @@ export default function TeacherUploadTest() {
                         >
                             <div>
                                 <h4 className="text-xs font-extrabold text-slate-800">{t.title}</h4>
-                                <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-1">
+                                <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-1 flex-wrap">
                                     <span>⏱ {t.duration} phút</span>
                                     <span>•</span>
                                     <span>{t.deadline ? `Hạn: ${new Date(t.deadline).toLocaleString()}` : 'Không giới hạn thời hạn'}</span>
+                                    {t.videoExplanationUrl ? (
+                                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
+                                            🎬 Đã có video chữa bài
+                                        </span>
+                                    ) : (
+                                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
+                                            Chưa có video
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={() => handleDeleteAssignedTest(t.id, t.title)}
-                                className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap self-end sm:self-auto"
-                                title="Xóa bài test này nếu đã lỡ giao nhầm"
-                            >
-                                <span>🗑️</span>
-                                <span>Xóa bài (Giao nhầm)</span>
-                            </button>
+                            <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setVideoTest(t)}
+                                    className={`px-3.5 py-1.5 border rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap ${
+                                        t.videoExplanationUrl
+                                            ? 'bg-white hover:bg-pink-50 text-slate-600 border-pink-200'
+                                            : 'bg-pink-500 hover:bg-pink-600 text-white border-pink-500'
+                                    }`}
+                                    title="Gắn hoặc đổi video chữa bài cho đề này"
+                                >
+                                    <span>🎬</span>
+                                    <span>{t.videoExplanationUrl ? 'Đổi video' : 'Video chữa bài'}</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeleteAssignedTest(t.id, t.title)}
+                                    className="px-3.5 py-1.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap"
+                                    title="Xóa bài test này nếu đã lỡ giao nhầm"
+                                >
+                                    <span>🗑️</span>
+                                    <span>Xóa bài (Giao nhầm)</span>
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
             )}
         </div>
+
+        {/* HỘP THOẠI GẮN VIDEO CHỮA BÀI CHO ĐỀ ĐÃ GIAO */}
+        <TestVideoModal
+            test={videoTest}
+            isOpen={Boolean(videoTest)}
+            onClose={() => setVideoTest(null)}
+            onSaved={() => setTestRefresh(prev => prev + 1)}
+        />
 
         {/* CUSTOM MODAL THÔNG BÁO THAY THẾ CHO ALERT TRÌNH DUYỆT */}
             {modalConfig.isOpen && (

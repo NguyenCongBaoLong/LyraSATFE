@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
-import { getEmbedYoutubeUrl } from '../utils/youtube';
+import VideoPlayer from '../components/VideoPlayer';
 import TextHighlighter from '../components/TextHighlighter';
 import scoreImage0To25 from '../assets/0-25.png';
 import scoreImage25To50 from '../assets/25-50.png';
@@ -259,15 +259,11 @@ export default function DoTest() {
                                     Video chữa đề & giải thích chi tiết (Cuối bài test)
                                 </span>
                             </div>
-                            <div className="relative aspect-video w-full rounded-xl overflow-hidden shadow-xs bg-black">
-                                <iframe
-                                    src={getEmbedYoutubeUrl(attemptInfo.videoExplanationUrl)}
-                                    title="Video chữa đề thi"
-                                    className="w-full h-full"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen
-                                />
-                            </div>
+                            <VideoPlayer
+                                url={attemptInfo.videoExplanationUrl}
+                                title="Video chữa đề thi"
+                                className="!rounded-xl"
+                            />
                         </div>
                     )}
 
@@ -378,15 +374,11 @@ export default function DoTest() {
                                 </p>
                             </div>
                         </div>
-                        <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-md bg-black border border-pink-200">
-                            <iframe
-                                src={getEmbedYoutubeUrl(testData.videoExplanationUrl)}
-                                title="Video giải thích bài test"
-                                className="w-full h-full"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                            />
-                        </div>
+                        <VideoPlayer
+                            url={testData.videoExplanationUrl}
+                            title="Video giải thích bài test"
+                            className="!rounded-2xl"
+                        />
                     </div>
                 )}
             </div>
