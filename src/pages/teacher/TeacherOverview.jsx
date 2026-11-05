@@ -56,6 +56,42 @@ export default function TeacherOverview() {
     const [pendingDeepLink, setPendingDeepLink] = useState(null);
     const deepLinkHandledRef = useRef(false);
 
+    // Gắn link video riêng cho từng câu hỏi (chỉ học sinh thấy khi xem lại đúng câu đó)
+    const [qVideoInput, setQVideoInput] = useState('');
+    const [qVideoEditing, setQVideoEditing] = useState(false);
+    const [qVideoSaving, setQVideoSaving] = useState(false);
+    const [qVideoError, setQVideoError] = useState('');
+
+    useEffect(() => {
+        setQVideoInput('');
+        setQVideoEditing(false);
+        setQVideoError('');
+    }, [currentReviewIndex, reviewData?.submissionId]);
+
+    // Lưu link video cho câu đang mở. url rỗng = gỡ video của câu đó.
+    const saveQuestionVideo = async (questionId, url) => {
+        setQVideoSaving(true);
+        setQVideoError('');
+        try {
+            const res = await api.put(`/questions/${questionId}/video`, { url });
+            const saved = res.data?.videoExplanationUrl || '';
+            setReviewData(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    questions: prev.questions.map(q => (q.id === questionId ? { ...q, videoExplanationUrl: saved } : q))
+                };
+            });
+            setQVideoInput('');
+            setQVideoEditing(false);
+        } catch (err) {
+            console.error('Lỗi lưu video câu hỏi:', err);
+            setQVideoError(err.response?.data?.message || 'Không lưu được link video. Kiểm tra kết nối rồi thử lại.');
+        } finally {
+            setQVideoSaving(false);
+        }
+    };
+
     const handleDeleteTest = async (testId, testTitle) => {
         if (!window.confirm(`Bạn có chắc chắn muốn xóa bài test "${testTitle}" không? Toàn bộ câu hỏi, bài làm và điểm số của học sinh trong bài test này sẽ bị xóa.`)) {
             return;
@@ -608,19 +644,78 @@ export default function TeacherOverview() {
                                             {currentQ.questionText}
                                         </h4>
 
-                                        {currentQ.videoExplanationUrl && (
-                                            <div className="mb-6 p-4 bg-pink-50/70 border border-pink-200 rounded-2xl">
-                                                <div className="flex items-center gap-1.5 mb-2.5">
+                                        {/* Video riêng cho câu này: chỉ hiện ở màn xem lại */}
+                                        <div className="mb-6 rounded-2xl border border-pink-200 bg-pink-50/60 p-4">
+                                            <div className="flex items-center justify-between gap-2 mb-2">
+                                                <div className="flex items-center gap-1.5">
                                                     <span className="text-base">📹</span>
-                                                    <span className="text-xs font-black text-pink-900">Video giải thích riêng câu này</span>
+                                                    <span className="text-xs font-black text-pink-900">Video chữa riêng câu này</span>
                                                 </div>
+                                                {currentQ.videoExplanationUrl && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => saveQuestionVideo(currentQ.id, '')}
+                                                        disabled={qVideoSaving}
+                                                        className="text-[11px] font-bold text-rose-600 hover:text-rose-800 underline disabled:opacity-50 cursor-pointer"
+                                                    >
+                                                        Gỡ video
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {currentQ.videoExplanationUrl ? (
                                                 <VideoPlayer
                                                     url={currentQ.videoExplanationUrl}
                                                     title="Video giải thích câu hỏi"
                                                     className="!rounded-xl"
                                                 />
-                                            </div>
-                                        )}
+                                            ) : (
+                                                <p className="text-[11px] text-slate-500">
+                                                    Chưa có video. Học sinh chỉ thấy video khi bấm đúng câu này ở màn xem lại bài.
+                                                </p>
+                                            )}
+
+                                            {qVideoEditing ? (
+                                                <div className="mt-3 space-y-2">
+                                                    <input
+                                                        type="url"
+                                                        value={qVideoInput}
+                                                        onChange={(e) => setQVideoInput(e.target.value)}
+                                                        placeholder="Dán link YouTube hoặc link file video trên Google Drive"
+                                                        className="w-full px-3 py-2 bg-white rounded-xl border border-pink-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setQVideoEditing(false); setQVideoError(''); }}
+                                                            className="flex-1 py-2 rounded-xl bg-white border border-pink-200 text-[11px] font-bold text-slate-600 hover:bg-pink-50 cursor-pointer"
+                                                        >
+                                                            Hủy
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => saveQuestionVideo(currentQ.id, qVideoInput)}
+                                                            disabled={qVideoSaving || !qVideoInput.trim()}
+                                                            className="flex-[2] py-2 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-[11px] font-black disabled:opacity-50 cursor-pointer"
+                                                        >
+                                                            {qVideoSaving ? 'Đang lưu...' : 'Lưu video cho câu này'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setQVideoEditing(true); setQVideoInput(currentQ.videoExplanationUrl || ''); }}
+                                                    className="mt-3 w-full py-2 rounded-xl bg-white border border-pink-200 text-[11px] font-bold text-pink-700 hover:bg-pink-100 transition cursor-pointer"
+                                                >
+                                                    {currentQ.videoExplanationUrl ? 'Đổi link video câu này' : '+ Gắn link video cho câu này'}
+                                                </button>
+                                            )}
+
+                                            {qVideoError && (
+                                                <p className="mt-2 text-[11px] font-bold text-rose-600">{qVideoError}</p>
+                                            )}
+                                        </div>
 
                                         {/* Danh sách lựa chọn A, B, C, D */}
                                         <div className="space-y-3">

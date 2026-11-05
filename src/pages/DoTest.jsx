@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
-import VideoGallery from '../components/VideoGallery';
 import TextHighlighter from '../components/TextHighlighter';
 import scoreImage0To25 from '../assets/0-25.png';
 import scoreImage25To50 from '../assets/25-50.png';
@@ -252,23 +251,6 @@ export default function DoTest() {
                         {attemptInfo?.message || "Bạn đã dùng hết số lần làm bài cho phép đối với bài test này."}
                     </p>
 
-                    {(attemptInfo?.videos?.length > 0 || attemptInfo?.videoExplanationUrl) && (
-                        <div className="mb-6 p-4 bg-pink-50/70 border border-pink-200 rounded-2xl text-left">
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className="text-xl">📹</span>
-                                <span className="text-xs font-black text-pink-900">
-                                    Video chữa đề & giải thích chi tiết (Cuối bài test)
-                                </span>
-                            </div>
-                            <VideoGallery
-                                videos={attemptInfo?.videos}
-                                legacyUrl={attemptInfo?.videoExplanationUrl}
-                                title="Video chữa đề thi"
-                                className="!rounded-xl"
-                            />
-                        </div>
-                    )}
-
                     <div className="flex flex-col sm:flex-row gap-3">
                         <button 
                             onClick={() => navigate('/score')}
@@ -362,25 +344,26 @@ export default function DoTest() {
                     </div>
                 </div>
 
-                {/* Video giải thích cho cả bài test sau khi làm xong */}
+                {/* Video chỉ hiện ở màn xem lại bài, không hiện ngay sau khi nộp */}
                 {(testData.videos?.length > 0 || testData.videoExplanationUrl) && (
                     <div className="bg-white rounded-3xl p-6 md:p-8 max-w-3xl w-full shadow-xl border border-pink-100 mt-6 animate-fadeIn">
                         <div className="flex items-center gap-2.5 mb-4">
                             <span className="text-2xl">📹</span>
                             <div>
                                 <h3 className="text-sm md:text-base font-black text-slate-800">
-                                    Video chữa đề & giải thích chi tiết
+                                    Đề này có video chữa bài
                                 </h3>
                                 <p className="text-xs text-slate-500">
-                                    Giáo viên hướng dẫn phương pháp giải và phân tích các câu hỏi trong đề
+                                    Video và lời giải từng câu nằm trong màn xem lại bài làm
                                 </p>
                             </div>
                         </div>
-                        <VideoGallery
-                            videos={testData.videos}
-                            legacyUrl={testData.videoExplanationUrl}
-                            title="Video giải thích bài test"
-                        />
+                        <button
+                            onClick={() => navigate('/score')}
+                            className="w-full py-3 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-black shadow-md shadow-pink-600/20 transition cursor-pointer"
+                        >
+                            Xem lại bài làm & video chữa bài
+                        </button>
                     </div>
                 )}
             </div>
