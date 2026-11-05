@@ -4,6 +4,7 @@ import api from '../../api';
 import Pagination from '../../components/Pagination';
 import QuestionDiscussion from '../../components/QuestionDiscussion';
 import VideoPlayer from '../../components/VideoPlayer';
+import TestVideoModal from '../../components/TestVideoModal';
 
 const TEST_PAGE_SIZE = 6;
 const SUBMISSION_PAGE_SIZE = 8;
@@ -32,6 +33,18 @@ export default function TeacherOverview() {
     const [isViewingVideo, setIsViewingVideo] = useState(false);
     const [isLoadingReview, setIsLoadingReview] = useState(false);
     const [focusCommentId, setFocusCommentId] = useState(null);
+
+    // Đề đang mở hộp thoại gắn video chữa bài (làm sau khi đã giao đề)
+    const [videoTest, setVideoTest] = useState(null);
+
+    // Cập nhật ngay tại chỗ để giáo viên thấy nhãn đổi mà không phải tải lại trang.
+    const handleVideoSaved = (testId, videoUrl) => {
+        setTests(prev => prev.map(t => (t.id === testId ? { ...t, videoExplanationUrl: videoUrl } : t)));
+        setSelectedTest(prev => (prev && prev.id === testId ? { ...prev, videoExplanationUrl: videoUrl } : prev));
+        if (videoUrl) {
+            setReviewData(prev => (prev ? { ...prev, videoExplanationUrl: videoUrl } : prev));
+        }
+    };
 
     // Deep-link từ thông báo (giáo viên)
     const [searchParams] = useSearchParams();
@@ -273,10 +286,26 @@ export default function TeacherOverview() {
                                     <h4 className="text-xs font-extrabold text-slate-800">{test.title}</h4>
                                     <p className="text-[11px] text-slate-400 mt-0.5">Thời gian: {test.duration} phút | Loại: {test.testType}</p>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 flex-wrap justify-end">
                                     <span className="text-xs font-bold text-pink-600 bg-white px-3 py-1 rounded-xl border border-pink-200 shadow-sm">
                                         {test.deadline ? `Hạn: ${new Date(test.deadline).toLocaleString()}` : 'Không giới hạn'}
                                     </span>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setVideoTest(test);
+                                        }}
+                                        className={`px-2.5 py-1 border rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                                            test.videoExplanationUrl
+                                                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                                                : 'bg-pink-500 hover:bg-pink-600 text-white border-pink-500 shadow-sm'
+                                        }`}
+                                        title={test.videoExplanationUrl ? 'Đổi hoặc gỡ video chữa bài' : 'Gắn video chữa bài cho đề này'}
+                                    >
+                                        <span>🎬</span>
+                                        <span>{test.videoExplanationUrl ? 'Đổi video' : 'Video chữa bài'}</span>
+                                    </button>
                                     <button
                                         type="button"
                                         onClick={(e) => {
@@ -316,6 +345,19 @@ export default function TeacherOverview() {
                                 <p className="text-xs text-slate-400 mt-0.5">Lớp: {selectedClass} | Thời lượng đề: {selectedTest.duration} phút</p>
                             </div>
                             <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setVideoTest(selectedTest)}
+                                    className={`px-3 py-1.5 border rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                                        selectedTest.videoExplanationUrl
+                                            ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                                            : 'bg-pink-500 hover:bg-pink-600 text-white border-pink-500'
+                                    }`}
+                                    title="Gắn hoặc đổi video chữa bài cho đề này"
+                                >
+                                    <span>🎬</span>
+                                    <span>{selectedTest.videoExplanationUrl ? 'Đổi video' : 'Video chữa bài'}</span>
+                                </button>
                                 <button
                                     type="button"
                                     onClick={() => handleDeleteTest(selectedTest.id, selectedTest.title)}
@@ -641,6 +683,16 @@ export default function TeacherOverview() {
                     </div>
                 </div>
             )}
+
+            {/* Hộp thoại gắn video chữa bài cho đề đã giao */}
+            <TestVideoModal
+                test={videoTest}
+                isOpen={Boolean(videoTest)}
+                onClose={() => setVideoTest(null)}
+                onSaved={(videoUrl) => {
+                    if (videoTest) handleVideoSaved(videoTest.id, videoUrl ?? '');
+                }}
+            />
         </div>
     );
 }

@@ -54,7 +54,8 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                     setIsSaving(false);
                     return;
                 }
-                await api.put(`/tests/${test.id}/video`, { videoExplanationUrl: url });
+                const res = await api.put(`/tests/${test.id}/video`, { videoExplanationUrl: url });
+                onSaved?.(res.data?.videoExplanationUrl ?? url);
             } else {
                 if (!file) {
                     setError('Hãy chọn file video trước khi tải lên.');
@@ -64,12 +65,12 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                 const formData = new FormData();
                 formData.append('file', file);
                 setProgressLabel('Đang tải video lên, đừng đóng cửa sổ này...');
-                await api.post(`/tests/${test.id}/video-file`, formData, {
+                const res = await api.post(`/tests/${test.id}/video-file`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                     timeout: 10 * 60 * 1000
                 });
+                onSaved?.(res.data?.videoExplanationUrl ?? '');
             }
-            onSaved?.();
             onClose?.();
         } catch (err) {
             console.error('Lỗi lưu video chữa bài:', err);
@@ -87,7 +88,7 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
         setError('');
         try {
             await api.put(`/tests/${test.id}/video`, { videoExplanationUrl: '' });
-            onSaved?.();
+            onSaved?.('');
             onClose?.();
         } catch (err) {
             console.error('Lỗi gỡ video:', err);
