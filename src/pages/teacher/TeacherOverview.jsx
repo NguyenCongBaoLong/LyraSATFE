@@ -4,10 +4,15 @@ import api from '../../api';
 import Pagination from '../../components/Pagination';
 import QuestionDiscussion from '../../components/QuestionDiscussion';
 import VideoPlayer from '../../components/VideoPlayer';
+import VideoGallery from '../../components/VideoGallery';
 import TestVideoModal from '../../components/TestVideoModal';
 
 const TEST_PAGE_SIZE = 6;
 const SUBMISSION_PAGE_SIZE = 8;
+
+// Số video chữa bài của một đề (đề cũ chỉ có 1 link nên coi như 1 video).
+const videoCountOf = (test) =>
+    test?.videoCount ?? (test?.videoExplanationUrl ? 1 : 0);
 
 export default function TeacherOverview() {
     const { selectedClass, openTeachersModal } = useOutletContext();
@@ -38,12 +43,12 @@ export default function TeacherOverview() {
     const [videoTest, setVideoTest] = useState(null);
 
     // Cập nhật ngay tại chỗ để giáo viên thấy nhãn đổi mà không phải tải lại trang.
-    const handleVideoSaved = (testId, videoUrl) => {
-        setTests(prev => prev.map(t => (t.id === testId ? { ...t, videoExplanationUrl: videoUrl } : t)));
-        setSelectedTest(prev => (prev && prev.id === testId ? { ...prev, videoExplanationUrl: videoUrl } : prev));
-        if (videoUrl) {
-            setReviewData(prev => (prev ? { ...prev, videoExplanationUrl: videoUrl } : prev));
-        }
+    const handleVideoSaved = (testId, videos) => {
+        const list = Array.isArray(videos) ? videos : [];
+        const patch = (t) => (t && t.id === testId ? { ...t, videoCount: list.length } : t);
+        setTests(prev => prev.map(patch));
+        setSelectedTest(prev => patch(prev));
+        setReviewData(prev => (prev ? { ...prev, videos: list } : prev));
     };
 
     // Deep-link từ thông báo (giáo viên)
@@ -297,14 +302,20 @@ export default function TeacherOverview() {
                                             setVideoTest(test);
                                         }}
                                         className={`px-2.5 py-1 border rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
-                                            test.videoExplanationUrl
+                                            videoCountOf(test) > 0
                                                 ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
                                                 : 'bg-pink-500 hover:bg-pink-600 text-white border-pink-500 shadow-sm'
                                         }`}
-                                        title={test.videoExplanationUrl ? 'Đổi hoặc gỡ video chữa bài' : 'Gắn video chữa bài cho đề này'}
+                                        title={videoCountOf(test) > 0 ? 'Thêm, đổi hoặc gỡ video chữa bài' : 'Gắn video chữa bài cho đề này'}
                                     >
                                         <span>🎬</span>
-                                        <span>{test.videoExplanationUrl ? 'Đổi video' : 'Video chữa bài'}</span>
+                                        <span>
+                                            {videoCountOf(test) > 1
+                                                ? `${videoCountOf(test)} video`
+                                                : videoCountOf(test) === 1
+                                                    ? 'Đổi video'
+                                                    : 'Video chữa bài'}
+                                        </span>
                                     </button>
                                     <button
                                         type="button"
@@ -349,14 +360,20 @@ export default function TeacherOverview() {
                                     type="button"
                                     onClick={() => setVideoTest(selectedTest)}
                                     className={`px-3 py-1.5 border rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                                        selectedTest.videoExplanationUrl
+                                        videoCountOf(selectedTest) > 0
                                             ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
                                             : 'bg-pink-500 hover:bg-pink-600 text-white border-pink-500'
                                     }`}
-                                    title="Gắn hoặc đổi video chữa bài cho đề này"
+                                    title="Thêm, đổi hoặc gỡ video chữa bài cho đề này"
                                 >
                                     <span>🎬</span>
-                                    <span>{selectedTest.videoExplanationUrl ? 'Đổi video' : 'Video chữa bài'}</span>
+                                    <span>
+                                        {videoCountOf(selectedTest) > 1
+                                            ? `${videoCountOf(selectedTest)} video`
+                                            : videoCountOf(selectedTest) === 1
+                                                ? 'Đổi video'
+                                                : 'Video chữa bài'}
+                                    </span>
                                 </button>
                                 <button
                                     type="button"
@@ -485,7 +502,7 @@ export default function TeacherOverview() {
                                     </button>
                                 ))}
 
-                                {reviewData.videoExplanationUrl && (
+                                {(reviewData.videos?.length > 0 || reviewData.videoExplanationUrl) && (
                                     <button
                                         type="button"
                                         onClick={() => setIsViewingVideo(true)}
@@ -497,7 +514,11 @@ export default function TeacherOverview() {
                                         title="Xem video chữa toàn bộ đề thi (ở cuối bài)"
                                     >
                                         <span>📹</span>
-                                        <span>Video cuối bài</span>
+                                        <span>
+                                            {reviewData.videos?.length > 1
+                                                ? `${reviewData.videos.length} video`
+                                                : 'Video cuối bài'}
+                                        </span>
                                     </button>
                                 )}
                             </div>
@@ -535,9 +556,10 @@ export default function TeacherOverview() {
                                         </div>
                                     </div>
 
-                                    {/* Video chữa bài: YouTube, Google Drive hoặc file tải lên server */}
-                                    <VideoPlayer
-                                        url={reviewData.videoExplanationUrl}
+                                    {/* Nhiều video chữa bài: YouTube, Google Drive hoặc file tải lên server */}
+                                    <VideoGallery
+                                        videos={reviewData.videos}
+                                        legacyUrl={reviewData.videoExplanationUrl}
                                         title="Video chữa đề thi ở cuối bài"
                                     />
 
@@ -658,7 +680,7 @@ export default function TeacherOverview() {
                                             >
                                                 Câu tiếp ›
                                             </button>
-                                        ) : reviewData.videoExplanationUrl ? (
+                                        ) : (reviewData.videos?.length > 0 || reviewData.videoExplanationUrl) ? (
                                             <button
                                                 type="button"
                                                 onClick={() => setIsViewingVideo(true)}
@@ -689,8 +711,8 @@ export default function TeacherOverview() {
                 test={videoTest}
                 isOpen={Boolean(videoTest)}
                 onClose={() => setVideoTest(null)}
-                onSaved={(videoUrl) => {
-                    if (videoTest) handleVideoSaved(videoTest.id, videoUrl ?? '');
+                onSaved={(videos) => {
+                    if (videoTest) handleVideoSaved(videoTest.id, videos);
                 }}
             />
         </div>

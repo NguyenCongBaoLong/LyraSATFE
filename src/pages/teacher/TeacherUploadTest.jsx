@@ -3,6 +3,10 @@ import { useOutletContext, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import TestVideoModal from '../../components/TestVideoModal';
 
+// Số video chữa bài của một đề (đề cũ chỉ có 1 link nên coi như 1 video).
+const videoCountOf = (test) =>
+    test?.videoCount ?? (test?.videoExplanationUrl ? 1 : 0);
+
 export default function TeacherUploadTest() {
     const { selectedClass } = useOutletContext();
     const navigate = useNavigate();
@@ -267,9 +271,9 @@ export default function TeacherUploadTest() {
                                     <span>⏱ {t.duration} phút</span>
                                     <span>•</span>
                                     <span>{t.deadline ? `Hạn: ${new Date(t.deadline).toLocaleString()}` : 'Không giới hạn thời hạn'}</span>
-                                    {t.videoExplanationUrl ? (
+                                    {videoCountOf(t) > 0 ? (
                                         <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
-                                            🎬 Đã có video chữa bài
+                                            🎬 {videoCountOf(t) > 1 ? `${videoCountOf(t)} video chữa bài` : 'Đã có video chữa bài'}
                                         </span>
                                     ) : (
                                         <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
@@ -284,14 +288,20 @@ export default function TeacherUploadTest() {
                                     type="button"
                                     onClick={() => setVideoTest(t)}
                                     className={`px-3.5 py-1.5 border rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shadow-xs whitespace-nowrap ${
-                                        t.videoExplanationUrl
+                                        videoCountOf(t) > 0
                                             ? 'bg-white hover:bg-pink-50 text-slate-600 border-pink-200'
                                             : 'bg-pink-500 hover:bg-pink-600 text-white border-pink-500'
                                     }`}
-                                    title="Gắn hoặc đổi video chữa bài cho đề này"
+                                    title="Thêm, đổi hoặc gỡ video chữa bài cho đề này"
                                 >
                                     <span>🎬</span>
-                                    <span>{t.videoExplanationUrl ? 'Đổi video' : 'Video chữa bài'}</span>
+                                    <span>
+                                        {videoCountOf(t) > 1
+                                            ? `${videoCountOf(t)} video`
+                                            : videoCountOf(t) === 1
+                                                ? 'Đổi video'
+                                                : 'Video chữa bài'}
+                                    </span>
                                 </button>
 
                                 <button

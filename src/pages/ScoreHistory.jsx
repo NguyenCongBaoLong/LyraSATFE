@@ -6,6 +6,7 @@ import Pagination from '../components/Pagination';
 import QuestionDiscussion from '../components/QuestionDiscussion';
 import NotificationBell from '../components/NotificationBell';
 import VideoPlayer from '../components/VideoPlayer';
+import VideoGallery from '../components/VideoGallery';
 
 const PAGE_SIZE = 8;
 
@@ -169,14 +170,18 @@ export default function ScoreHistory() {
                                 </div>
 
                                 <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap">
-                                    {item.videoExplanationUrl && (
+                                    {(item.videoCount > 0 || item.videoExplanationUrl) && (
                                         <button 
                                             onClick={() => handleOpenReview(item.id, true)}
                                             className="py-2.5 px-4 bg-white hover:bg-pink-50 text-pink-600 border border-pink-200 text-xs font-bold rounded-2xl transition shadow-sm flex items-center gap-1.5 cursor-pointer"
                                             title="Xem video chữa đề thi này ở cuối bài"
                                         >
                                             <span>📹</span>
-                                            <span>Video chữa bài</span>
+                                            <span>
+                                                {item.videoCount > 1
+                                                    ? `${item.videoCount} video chữa bài`
+                                                    : 'Video chữa bài'}
+                                            </span>
                                         </button>
                                     )}
                                     <button 
@@ -251,7 +256,7 @@ export default function ScoreHistory() {
                                     </button>
                                 ))}
 
-                                {reviewData.videoExplanationUrl && (
+                                {(reviewData.videos?.length > 0 || reviewData.videoExplanationUrl) && (
                                     <button
                                         onClick={() => setIsViewingVideo(true)}
                                         className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer flex-shrink-0 whitespace-nowrap ${
@@ -262,7 +267,11 @@ export default function ScoreHistory() {
                                         title="Xem video chữa toàn bộ đề thi (ở cuối bài)"
                                     >
                                         <span>📹</span>
-                                        <span>Video cuối bài</span>
+                                        <span>
+                                            {reviewData.videos?.length > 1
+                                                ? `${reviewData.videos.length} video`
+                                                : 'Video cuối bài'}
+                                        </span>
                                     </button>
                                 )}
                             </div>
@@ -302,9 +311,10 @@ export default function ScoreHistory() {
                                         </div>
                                     </div>
 
-                                    {/* Video chữa đề: YouTube, Google Drive hoặc file tải lên server */}
-                                    <VideoPlayer
-                                        url={reviewData.videoExplanationUrl}
+                                    {/* Video chữa đề: nhiều video, YouTube / Drive / file tải lên server */}
+                                    <VideoGallery
+                                        videos={reviewData.videos}
+                                        legacyUrl={reviewData.videoExplanationUrl}
                                         title="Video chữa đề thi ở cuối bài"
                                     />
 
@@ -431,7 +441,7 @@ export default function ScoreHistory() {
                                             >
                                                 Câu tiếp ›
                                             </button>
-                                        ) : reviewData.videoExplanationUrl ? (
+                                        ) : (reviewData.videos?.length > 0 || reviewData.videoExplanationUrl) ? (
                                             <button
                                                 onClick={() => setIsViewingVideo(true)}
                                                 className="px-5 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-md shadow-pink-500/20 hover:opacity-95 flex items-center gap-1.5"

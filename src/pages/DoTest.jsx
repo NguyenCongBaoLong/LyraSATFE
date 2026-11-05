@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
-import VideoPlayer from '../components/VideoPlayer';
+import VideoGallery from '../components/VideoGallery';
 import TextHighlighter from '../components/TextHighlighter';
 import scoreImage0To25 from '../assets/0-25.png';
 import scoreImage25To50 from '../assets/25-50.png';
@@ -113,7 +113,8 @@ export default function DoTest() {
                 setTestData({
                     title: res.data.title,
                     duration: res.data.duration,
-                    videoExplanationUrl: res.data.videoExplanationUrl || ''
+                    videoExplanationUrl: res.data.videoExplanationUrl || '',
+                    videos: Array.isArray(res.data.videos) ? res.data.videos : []
                 });
 
                 const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
@@ -251,7 +252,7 @@ export default function DoTest() {
                         {attemptInfo?.message || "Bạn đã dùng hết số lần làm bài cho phép đối với bài test này."}
                     </p>
 
-                    {attemptInfo?.videoExplanationUrl && (
+                    {(attemptInfo?.videos?.length > 0 || attemptInfo?.videoExplanationUrl) && (
                         <div className="mb-6 p-4 bg-pink-50/70 border border-pink-200 rounded-2xl text-left">
                             <div className="flex items-center gap-2 mb-3">
                                 <span className="text-xl">📹</span>
@@ -259,8 +260,9 @@ export default function DoTest() {
                                     Video chữa đề & giải thích chi tiết (Cuối bài test)
                                 </span>
                             </div>
-                            <VideoPlayer
-                                url={attemptInfo.videoExplanationUrl}
+                            <VideoGallery
+                                videos={attemptInfo?.videos}
+                                legacyUrl={attemptInfo?.videoExplanationUrl}
                                 title="Video chữa đề thi"
                                 className="!rounded-xl"
                             />
@@ -361,7 +363,7 @@ export default function DoTest() {
                 </div>
 
                 {/* Video giải thích cho cả bài test sau khi làm xong */}
-                {testData.videoExplanationUrl && (
+                {(testData.videos?.length > 0 || testData.videoExplanationUrl) && (
                     <div className="bg-white rounded-3xl p-6 md:p-8 max-w-3xl w-full shadow-xl border border-pink-100 mt-6 animate-fadeIn">
                         <div className="flex items-center gap-2.5 mb-4">
                             <span className="text-2xl">📹</span>
@@ -374,10 +376,10 @@ export default function DoTest() {
                                 </p>
                             </div>
                         </div>
-                        <VideoPlayer
-                            url={testData.videoExplanationUrl}
+                        <VideoGallery
+                            videos={testData.videos}
+                            legacyUrl={testData.videoExplanationUrl}
                             title="Video giải thích bài test"
-                            className="!rounded-2xl"
                         />
                     </div>
                 )}
