@@ -30,6 +30,12 @@ export function resolveVideoSource(rawUrl) {
         return { kind: 'drive', src: `https://drive.google.com/file/d/${driveMatch[1]}/preview` };
     }
 
+    // Link tài liệu Google (Docs/Slides/Sheets) hoặc thư mục Drive: Google chặn iframe,
+    // nhúng vào sẽ ra khung đen. Báo rõ cho người xem thay vì hiện khung hỏng.
+    if (/docs\.google\.com|slides\.google\.com|sheets\.google\.com|drive\.google\.com\/drive\//i.test(absolute)) {
+        return { kind: 'blocked', src: absolute };
+    }
+
     if (/youtu\.?be/i.test(absolute)) {
         const idMatch = absolute.match(/(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/i);
         return { kind: 'youtube', src: idMatch ? `https://www.youtube.com/embed/${idMatch[1]}` : absolute };
