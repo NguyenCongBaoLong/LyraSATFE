@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import TextHighlighter from '../components/TextHighlighter';
+import RichContent from '../components/RichContent';
 import scoreImage0To25 from '../assets/0-25.png';
 import scoreImage25To50 from '../assets/25-50.png';
 import scoreImage50To75 from '../assets/50-75.png';
@@ -473,9 +474,9 @@ export default function DoTest() {
                         <div className="w-full text-left">
                             <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
                             {currentQ.passageText ? (
-                                <div
-                                    className="passage-content text-[15px] md:text-base leading-relaxed text-slate-800 font-sans select-text cursor-text text-left"
-                                    dangerouslySetInnerHTML={{ __html: currentQ.passageText }}
+                                <RichContent
+                                    content={currentQ.passageText}
+                                    className="text-[15px] md:text-base leading-relaxed text-slate-800 font-sans select-text cursor-text text-left"
                                 />
                             ) : (
                                 <p className="text-[15px] md:text-base leading-relaxed text-slate-800 font-sans select-text cursor-text text-left">
@@ -513,9 +514,10 @@ export default function DoTest() {
                             </div>
 
                             {/* Câu hỏi căn đầu theo chuẩn ảnh 2 */}
-                            <h3 className="font-semibold text-sm md:text-[15px] text-slate-800 mb-6 leading-relaxed whitespace-pre-line select-text cursor-text">
-                                {currentQ.questionText}
-                            </h3>
+                            <RichContent
+                                content={currentQ.questionText}
+                                className="font-semibold text-sm md:text-[15px] text-slate-800 mb-6 leading-relaxed select-text cursor-text"
+                            />
 
                             {/* Các lựa chọn đáp án A, B, C, D */}
                             <div className="space-y-3">
@@ -542,7 +544,10 @@ export default function DoTest() {
                                             }`}>
                                                 {opt.key}
                                             </div>
-                                            <span className="text-sm font-medium text-slate-800 select-text cursor-text">{opt.text}</span>
+                                            <RichContent
+                                                content={opt.text}
+                                                className="text-sm font-medium text-slate-800 select-text cursor-text"
+                                            />
                                         </div>
                                     )
                                 ))}

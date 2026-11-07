@@ -1,9 +1,41 @@
 @import "tailwindcss";
 
+.rich-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .passage-content {
   white-space: pre-line;
 }
 
+.rich-content p,
+.rich-content ul,
+.rich-content ol {
+  margin: 0 0 0.85rem;
+}
+
+.rich-content p:last-child,
+.rich-content ul:last-child,
+.rich-content ol:last-child {
+  margin-bottom: 0;
+}
+
+.rich-content ul,
+.rich-content ol {
+  padding-left: 1.5rem;
+}
+
+.rich-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem auto;
+  border-radius: 0.75rem;
+  object-fit: contain;
+}
+
+.rich-table-wrapper,
 .passage-content .passage-table-wrapper {
   width: 100%;
   margin: 1rem 0 1.25rem;
@@ -13,6 +45,7 @@
   background: #fff;
 }
 
+.rich-table,
 .passage-content .passage-table {
   width: 100%;
   min-width: 22rem;
@@ -22,18 +55,23 @@
   line-height: 1.5;
 }
 
+.rich-table th,
+.rich-table td,
 .passage-content .passage-table td {
   border: 1px solid #e2e8f0;
   padding: 0.65rem 0.8rem;
   vertical-align: top;
 }
 
+.rich-table th,
+.rich-table tr:first-child td,
 .passage-content .passage-table tr:first-child td {
   background: #fff1f5;
   color: #831843;
   font-weight: 700;
 }
 
+.rich-table tr:nth-child(even) td,
 .passage-content .passage-table tr:nth-child(even) td {
   background: #f8fafc;
 }

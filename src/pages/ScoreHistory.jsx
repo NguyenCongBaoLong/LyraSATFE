@@ -7,6 +7,7 @@ import QuestionDiscussion from '../components/QuestionDiscussion';
 import NotificationBell from '../components/NotificationBell';
 import VideoPlayer from '../components/VideoPlayer';
 import VideoGallery from '../components/VideoGallery';
+import RichContent from '../components/RichContent';
 
 const PAGE_SIZE = 8;
 
@@ -343,9 +344,9 @@ export default function ScoreHistory() {
                                 <div className="bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
                                     <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
                                     {currentQ.passageText ? (
-                                        <div
-                                            className="passage-content text-[15px] leading-relaxed text-slate-800 font-sans text-left"
-                                            dangerouslySetInnerHTML={{ __html: currentQ.passageText }}
+                                        <RichContent
+                                            content={currentQ.passageText}
+                                            className="text-[15px] leading-relaxed text-slate-800 font-sans text-left"
                                         />
                                     ) : (
                                         <p className="text-[15px] leading-relaxed text-slate-800 font-sans text-left">
@@ -357,9 +358,10 @@ export default function ScoreHistory() {
                                 {/* Cột Phải: Question & Các đáp án được tô màu + Khung thảo luận */}
                                 <div className="bg-white p-10 overflow-y-auto flex flex-col justify-between">
                                     <div>
-                                        <h4 className="font-bold text-sm text-slate-800 mb-6 leading-relaxed whitespace-pre-line">
-                                            {currentQ.questionText}
-                                        </h4>
+                                        <RichContent
+                                            content={currentQ.questionText}
+                                            className="font-bold text-sm text-slate-800 mb-6 leading-relaxed"
+                                        />
 
                                         {/* Video giải thích riêng cho câu hỏi này (nếu có) */}
                                         {currentQ.videoExplanationUrl && (
@@ -410,7 +412,7 @@ export default function ScoreHistory() {
                                                         <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs ${badgeStyle}`}>
                                                             {opt.key}
                                                         </div>
-                                                        <span className="text-sm leading-relaxed">{opt.text}</span>
+                                                        <RichContent content={opt.text} className="text-sm leading-relaxed" />
                                                     </div>
                                                 );
                                             })}
