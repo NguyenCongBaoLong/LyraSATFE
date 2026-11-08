@@ -99,7 +99,7 @@ export default function Mission() {
 
                 {/* Các nhóm nhiệm vụ: đang làm, sắp hết hạn, hết hạn và đã hết lượt */}
                 <div className="flex gap-8 border-b border-pink-100 mb-6 pb-3 text-sm font-semibold">
-                    {['Làm gấp', 'Đang làm', 'Hết hạn', 'Đã làm rồi'].map(tab => (
+                    {['Làm gấp', 'Đang làm', 'Hết hạn', 'Đã làm'].map(tab => (
                         <button
                             key={tab}
                             onClick={() => {

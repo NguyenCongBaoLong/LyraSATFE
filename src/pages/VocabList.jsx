@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import StudentSidebar from '../components/StudentSidebar';
+import NotificationBell from '../components/NotificationBell';
 import Pagination from '../components/Pagination';
 
 const LIST_PAGE_SIZE = 8;
@@ -185,19 +186,22 @@ export default function VocabList() {
                         </p>
                     </div>
 
-                    {studyMode ? (
-                        <button onClick={() => setStudyMode(false)} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
-                            ← Quay lại chọn Series
-                        </button>
-                    ) : selectedClass ? (
-                        <button onClick={() => setSelectedClass(null)} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
-                            ← Chọn lớp khác
-                        </button>
-                    ) : (
-                        <button onClick={() => navigate('/home')} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
-                            ← Về trang chủ
-                        </button>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {studyMode ? (
+                            <button onClick={() => setStudyMode(false)} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
+                                ← Quay lại chọn Series
+                            </button>
+                        ) : selectedClass ? (
+                            <button onClick={() => setSelectedClass(null)} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
+                                ← Chọn lớp khác
+                            </button>
+                        ) : (
+                            <button onClick={() => navigate('/home')} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
+                                ← Về trang chủ
+                            </button>
+                        )}
+                        <NotificationBell />
+                    </div>
                 </div>
 
                 {/* GIAO DIỆN 1: Chọn Lớp học trước */}

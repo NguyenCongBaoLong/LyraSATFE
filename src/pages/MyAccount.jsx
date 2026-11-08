@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import StudentSidebar from '../components/StudentSidebar';
+import NotificationBell from '../components/NotificationBell';
 
 const EXAM_DATE_OPTIONS = ['2026-10-03', '2026-12-05', '2027-03-13', '2027-05-08'];
 
@@ -107,9 +108,12 @@ export default function MyAccount() {
                         <h1 className="text-xl font-black text-pink-900">My Account & Settings</h1>
                         <p className="text-xs text-slate-400 mt-0.5">Quản lý thông tin cá nhân và cấu hình tài khoản</p>
                     </div>
-                    <button onClick={() => navigate('/home')} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
-                        ← Về trang chủ
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => navigate('/home')} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
+                            ← Về trang chủ
+                        </button>
+                        <NotificationBell />
+                    </div>
                 </div>
 
                 <form onSubmit={handleUpdate} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
