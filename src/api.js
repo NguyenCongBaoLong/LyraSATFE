@@ -8,6 +8,7 @@ if (!apiUrl) {
 
 const api = axios.create({
     baseURL: `${apiUrl.replace(/\/+$/, '')}/api`,
+    timeout: 20000,
 });
 
 // Dùng để dựng URL tuyệt đối cho file tĩnh backend trả về (/uploads/...).

@@ -9,11 +9,13 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
+        setIsSubmitting(true);
         try {
             const response = await api.post('/auth/login', { email, password });
             
@@ -30,7 +32,15 @@ export default function Login() {
                 navigate('/home');
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Đăng nhập thất bại!');
+            if (err.code === 'ECONNABORTED') {
+                setError('Máy chủ phản hồi quá lâu. Vui lòng thử lại sau ít phút.');
+            } else if (!err.response) {
+                setError('Không thể kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.');
+            } else {
+                setError(err.response.data?.message || 'Đăng nhập thất bại!');
+            }
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -78,8 +88,8 @@ export default function Login() {
                                 </button>
                             </div>
                         </div>
-                        <button type="submit" className="w-full py-3.5 bg-pink-500 hover:bg-pink-600 transition rounded-2xl font-bold text-sm text-white shadow-lg shadow-pink-500/30 cursor-pointer">
-                            Đăng nhập
+                        <button type="submit" disabled={isSubmitting} className="w-full py-3.5 bg-pink-500 hover:bg-pink-600 disabled:opacity-60 disabled:cursor-not-allowed transition rounded-2xl font-bold text-sm text-white shadow-lg shadow-pink-500/30 cursor-pointer">
+                            {isSubmitting ? 'Đang kết nối...' : 'Đăng nhập'}
                         </button>
                     </form>
                 </div>
