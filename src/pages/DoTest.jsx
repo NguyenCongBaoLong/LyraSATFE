@@ -38,17 +38,13 @@ export default function DoTest() {
         return saved ? JSON.parse(saved) : {};
     });
 
-    // 2. Khôi phục thời gian làm bài chuẩn xác qua sessionStorage (Chống reset khi F5 hoặc vào lại)
-    const [timeLeft, setTimeLeft] = useState(3600);
-    const [startTime] = useState(() => {
-        const savedStart = sessionStorage.getItem(`test_${id}_start_time`);
-        if (savedStart) {
-            return parseInt(savedStart, 10);
-        }
-        const now = Date.now();
-        sessionStorage.setItem(`test_${id}_start_time`, now.toString());
-        return now;
+    // 2. Lưu trực tiếp số giây còn lại để rời bài không làm thời gian tiếp tục trôi.
+    const timeLeftKey = `test_${id}_time_left`;
+    const [timeLeft, setTimeLeft] = useState(() => {
+        const saved = sessionStorage.getItem(timeLeftKey);
+        return saved === null ? 0 : Math.max(0, parseInt(saved, 10) || 0);
     });
+    const [isExitPaused, setIsExitPaused] = useState(false);
 
     const [quizResult, setQuizResult] = useState(null);
     const [modalConfig, setModalConfig] = useState({
@@ -72,6 +68,7 @@ export default function DoTest() {
 
     const closeModal = useCallback(() => {
         setModalConfig(prev => ({ ...prev, isOpen: false }));
+        setIsExitPaused(false);
     }, []);
 
     // Kiểm tra số lần làm bài trước khi cho phép vào thi
@@ -117,14 +114,16 @@ export default function DoTest() {
                     videos: Array.isArray(res.data.videos) ? res.data.videos : []
                 });
 
-                const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
-                const remaining = totalDurationSec - elapsedSec;
-                
-                if (remaining <= 0) {
-                    setTimeLeft(0);
-                } else {
-                    setTimeLeft(remaining);
-                }
+                const savedRemaining = sessionStorage.getItem(timeLeftKey);
+                const savedStart = sessionStorage.getItem(`test_${id}_start_time`);
+                const remaining = savedRemaining !== null
+                    ? Math.min(totalDurationSec, Math.max(0, parseInt(savedRemaining, 10) || 0))
+                    : savedStart
+                        ? Math.max(0, totalDurationSec - Math.floor((Date.now() - parseInt(savedStart, 10)) / 1000))
+                        : totalDurationSec;
+                setTimeLeft(remaining);
+                sessionStorage.setItem(timeLeftKey, remaining.toString());
+                sessionStorage.removeItem(`test_${id}_start_time`);
 
                 if (res.data.questions && res.data.questions.length > 0) {
                     const formattedQuestions = res.data.questions.map(q => {
@@ -163,20 +162,22 @@ export default function DoTest() {
             .catch(err => {
                 console.error("Lỗi tải bài test:", err);
             });
-    }, [id, startTime, allowed, studentId]);
+    }, [id, allowed, studentId, timeLeftKey]);
 
     // Đồng hồ đếm ngược
     useEffect(() => {
-        if (!allowed || !testData || timeLeft <= 0) return;
+        if (!allowed || !testData || timeLeft <= 0 || isExitPaused) return;
 
         const timer = setInterval(() => {
             setTimeLeft(prev => {
-                return Math.max(0, prev - 1);
+                const next = Math.max(0, prev - 1);
+                sessionStorage.setItem(timeLeftKey, next.toString());
+                return next;
             });
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [allowed, testData, timeLeft]);
+    }, [allowed, testData, timeLeft, isExitPaused, timeLeftKey]);
 
     const handleConfirmSubmit = useCallback(async () => {
         if (isSubmittingRef.current) return;
@@ -188,7 +189,8 @@ export default function DoTest() {
         setIsSubmitting(true);
         closeModal();
         try {
-            const timeSpentSec = Math.floor((Date.now() - startTime) / 1000);
+            const totalDurationSec = (testData?.duration || 60) * 60;
+            const timeSpentSec = Math.max(0, totalDurationSec - timeLeft);
             const submissionData = {
                 studentId: studentId,
                 testId: parseInt(id),
@@ -200,6 +202,7 @@ export default function DoTest() {
             
             sessionStorage.removeItem(`test_${id}_answers`);
             sessionStorage.removeItem(`test_${id}_marks`);
+            sessionStorage.removeItem(timeLeftKey);
             sessionStorage.removeItem(`test_${id}_start_time`);
 
             setQuizResult(response.data);
@@ -210,7 +213,7 @@ export default function DoTest() {
             isSubmittingRef.current = false;
             setIsSubmitting(false);
         }
-    }, [closeModal, id, navigate, selectedAnswers, showAlert, startTime, studentId]);
+    }, [closeModal, id, navigate, selectedAnswers, showAlert, studentId, testData, timeLeft, timeLeftKey]);
 
     useEffect(() => {
         submitHandlerRef.current = handleConfirmSubmit;
@@ -229,6 +232,8 @@ export default function DoTest() {
     };
 
     const handleExitTest = () => {
+        setIsExitPaused(true);
+        sessionStorage.setItem(timeLeftKey, timeLeft.toString());
         showConfirm(
             "Thoát bài thi?",
             "Tiến trình làm bài của bạn đang được lưu tạm. Bạn có chắc chắn muốn thoát về danh sách bài tập không?",

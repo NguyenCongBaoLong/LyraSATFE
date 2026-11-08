@@ -9,13 +9,14 @@ const PAGE_SIZE = 8;
 const tabStatuses = {
     'Làm gấp': 'urgent',
     'Đang làm': 'active',
-    'Hết hạn': 'expired'
+    'Hết hạn': 'expired',
+    'Đã làm': 'completed'
 };
 
 export default function Mission() {
     const [user, setUser] = useState(null);
     const [tests, setTests] = useState([]);
-    const [activeTab, setActiveTab] = useState('Đang làm'); // 'Làm gấp' | 'Đang làm' | 'Hết hạn'
+    const [activeTab, setActiveTab] = useState('Đang làm');
     const [page, setPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
@@ -72,6 +73,8 @@ export default function Mission() {
             ? 'bg-red-500'
             : tabStatuses[activeTab] === 'expired'
                 ? 'bg-slate-400'
+                : tabStatuses[activeTab] === 'completed'
+                    ? 'bg-emerald-500'
                 : 'bg-pink-500'
     }));
 
@@ -94,9 +97,9 @@ export default function Mission() {
 
                 
 
-                {/* 3 Tab chính theo yêu cầu: Làm gấp, Đang làm, Hết hạn */}
+                {/* Các nhóm nhiệm vụ: đang làm, sắp hết hạn, hết hạn và đã hết lượt */}
                 <div className="flex gap-8 border-b border-pink-100 mb-6 pb-3 text-sm font-semibold">
-                    {['Làm gấp', 'Đang làm', 'Hết hạn'].map(tab => (
+                    {['Làm gấp', 'Đang làm', 'Hết hạn', 'Đã làm rồi'].map(tab => (
                         <button
                             key={tab}
                             onClick={() => {

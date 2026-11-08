@@ -29,7 +29,7 @@ function decodeHtmlEntities(value) {
 function sanitizeHtml(value) {
     if (!value) return '';
     const decodedValue = decodeHtmlEntities(value);
-    if (!/<[a-z][\s\S]*>/i.test(decodedValue)) return escapePlainText(decodedValue);
+    if (!/<\/?[a-z][\s\S]*>/i.test(decodedValue)) return escapePlainText(decodedValue);
 
     const documentFragment = new DOMParser().parseFromString(decodedValue, 'text/html');
     documentFragment.querySelectorAll('script,style,iframe,object,embed,form').forEach(node => node.remove());
