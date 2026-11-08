@@ -641,9 +641,10 @@ export default function TeacherOverview() {
                                 {/* Cột Phải: Question & Discussion */}
                                 <div className="bg-white p-10 overflow-y-auto flex flex-col justify-between">
                                     <div>
-                                        <h4 className="font-bold text-sm text-slate-800 mb-6 leading-relaxed whitespace-pre-line">
-                                            {currentQ.questionText}
-                                        </h4>
+                                        <RichContent
+                                            content={currentQ.questionText}
+                                            className="font-bold text-sm text-slate-800 mb-6 leading-relaxed"
+                                        />
 
                                         {/* Video riêng cho câu này: chỉ hiện ở màn xem lại */}
                                         <div className="mb-6 rounded-2xl border border-pink-200 bg-pink-50/60 p-4">
