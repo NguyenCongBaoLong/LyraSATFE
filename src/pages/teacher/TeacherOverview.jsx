@@ -6,6 +6,7 @@ import QuestionDiscussion from '../../components/QuestionDiscussion';
 import VideoPlayer from '../../components/VideoPlayer';
 import VideoGallery from '../../components/VideoGallery';
 import TestVideoModal from '../../components/TestVideoModal';
+import RichContent from '../../components/RichContent';
 
 const TEST_PAGE_SIZE = 6;
 const SUBMISSION_PAGE_SIZE = 8;
@@ -626,9 +627,9 @@ export default function TeacherOverview() {
                                 <div className="bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
                                     <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
                                     {currentQ.passageText ? (
-                                        <div
+                                        <RichContent
+                                            content={currentQ.passageText}
                                             className="passage-content text-[15px] leading-relaxed text-slate-800 font-sans text-left"
-                                            dangerouslySetInnerHTML={{ __html: currentQ.passageText }}
                                         />
                                     ) : (
                                         <p className="text-[15px] leading-relaxed text-slate-800 font-sans text-left">

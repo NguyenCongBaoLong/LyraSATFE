@@ -12,11 +12,26 @@ function escapePlainText(value) {
     return container.innerHTML.replace(/\r?\n/g, '<br>');
 }
 
+function decodeHtmlEntities(value) {
+    let decoded = value;
+    const container = document.createElement('textarea');
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        container.innerHTML = decoded;
+        const next = container.value;
+        if (next === decoded) break;
+        decoded = next;
+    }
+
+    return decoded;
+}
+
 function sanitizeHtml(value) {
     if (!value) return '';
-    if (!/<[a-z][\s\S]*>/i.test(value)) return escapePlainText(value);
+    const decodedValue = decodeHtmlEntities(value);
+    if (!/<[a-z][\s\S]*>/i.test(decodedValue)) return escapePlainText(decodedValue);
 
-    const documentFragment = new DOMParser().parseFromString(value, 'text/html');
+    const documentFragment = new DOMParser().parseFromString(decodedValue, 'text/html');
     documentFragment.querySelectorAll('script,style,iframe,object,embed,form').forEach(node => node.remove());
 
     documentFragment.body.querySelectorAll('*').forEach(node => {
