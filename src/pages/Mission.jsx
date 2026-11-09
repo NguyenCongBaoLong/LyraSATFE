@@ -134,7 +134,11 @@ export default function Mission() {
                         displayTests.map(test => (
                             <div 
                                 key={test.id} 
-                                onClick={() => navigate(`/test/${test.id}`)}
+                                onClick={() => navigate(
+                                    tabStatuses[activeTab] === 'completed'
+                                        ? `/score?testId=${test.id}`
+                                        : `/test/${test.id}`
+                                )}
                                 className="bg-white rounded-3xl p-6 border border-pink-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition cursor-pointer relative overflow-hidden flex items-center justify-between"
                             >
                                 {/* Tag trạng thái góc trên phải */}
