@@ -126,7 +126,18 @@ export default function TeacherUploadTest() {
                 }
             );
         } catch (err) {
-            showAlert("Đã xảy ra lỗi", "Lỗi khi tải lên bài test hoặc đọc file Word. Vui lòng kiểm tra lại định dạng file!", "error");
+            const data = err.response?.data;
+            const issues = Array.isArray(data?.issues) ? data.issues : [];
+            const baseMessage = data?.message
+                || 'Lỗi khi tải lên bài test hoặc đọc file Word. Vui lòng kiểm tra lại định dạng file!';
+            const detail = issues.length > 0
+                ? `\n\nCác câu cần sửa:\n${issues.slice(0, 8).map((line) => `- ${line}`).join('\n')}`
+                : '';
+            showAlert(
+                issues.length > 0 ? 'File Word có lỗi đáp án' : 'Đã xảy ra lỗi',
+                baseMessage + detail,
+                'error'
+            );
         } finally {
             setIsSubmitting(false);
         }
@@ -337,7 +348,7 @@ export default function TeacherUploadTest() {
                         </div>
 
                         <h3 className="text-xl font-bold text-slate-800 mb-2">{modalConfig.title}</h3>
-                        <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+                        <p className="text-sm text-slate-500 mb-6 leading-relaxed whitespace-pre-line text-left">
                             {modalConfig.message}
                         </p>
 
