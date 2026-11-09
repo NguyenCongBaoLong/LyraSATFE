@@ -313,7 +313,7 @@ export default function DoTest() {
                 : score < 75
                     ? scoreImage50To75
                     : scoreImage75To100;
-        const fruitCount = Math.ceil(score / 10);
+        const fruitCount = Number(quizResult.fruitCount) || 0;
 
         return (
             <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex flex-col items-center justify-center font-sans p-6">

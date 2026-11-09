@@ -13,6 +13,7 @@ const DROPDOWN_LIMIT = 8;
 
 export default function NotificationBell({ className = '', align = 'right' }) {
     const [unreadCount, setUnreadCount] = useState(0);
+    const [fruitCount, setFruitCount] = useState(0);
     const [notifications, setNotifications] = useState([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +24,7 @@ export default function NotificationBell({ className = '', align = 'right' }) {
 
     const user = JSON.parse(localStorage.getItem('user')) || {};
     const userId = user.id;
+    const isStudent = user.role === 'Student';
 
     // 1. Tải số lượng chưa đọc định kỳ
     const fetchUnreadCount = useCallback(async () => {
@@ -37,6 +39,27 @@ export default function NotificationBell({ className = '', align = 'right' }) {
             setCountError(true);
         }
     }, [userId]);
+
+    useEffect(() => {
+        if (!userId || !isStudent) return;
+
+        let isMounted = true;
+        const fetchFruitCount = async () => {
+            try {
+                const res = await api.get(`/submissions/fruit-count/${userId}`);
+                if (isMounted) setFruitCount(res.data?.fruitCount ?? 0);
+            } catch (err) {
+                console.error('Lỗi tải tổng số quả đã nhận:', err);
+            }
+        };
+
+        fetchFruitCount();
+        const interval = setInterval(fetchFruitCount, 15000);
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
+    }, [isStudent, userId]);
 
     useEffect(() => {
         let isMounted = true;
@@ -128,7 +151,17 @@ export default function NotificationBell({ className = '', align = 'right' }) {
     };
 
     return (
-        <div className={`relative ${className}`} ref={dropdownRef}>
+        <div className={`relative flex items-center gap-2 ${className}`} ref={dropdownRef}>
+            {isStudent && (
+                <div
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-pink-50 border border-pink-100 text-pink-700 shadow-sm"
+                    aria-label={`Tổng số quả đã nhận: ${fruitCount}`}
+                    title="Tổng số quả nhận được từ các bài đã làm"
+                >
+                    <span aria-hidden="true">🍈</span>
+                    <span className="text-xs font-black">{fruitCount}</span>
+                </div>
+            )}
             <button
                 type="button"
                 onClick={toggleOpen}
