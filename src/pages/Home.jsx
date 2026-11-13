@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StudentSidebar from '../components/StudentSidebar';
+import StudentClassSwitcher from '../components/StudentClassSwitcher';
 import NotificationBell from '../components/NotificationBell';
 
 // Import các ảnh banner và mascot từ thư mục assets của bạn
@@ -79,7 +80,7 @@ export default function Home() {
                 <div className="flex justify-between items-center mb-8 bg-white p-5 rounded-3xl border border-pink-100 shadow-sm">
                     <div>
                         <h1 className="text-xl font-black text-pink-900">{user.fullName}</h1>
-                        <p className="text-xs text-slate-400 mt-0.5">Lớp: <span className="text-slate-700 font-semibold">{user.classCode}</span></p>
+                        <StudentClassSwitcher user={user} />
                     </div>
                     <div className="flex items-center gap-2">
                         <NotificationBell align="right" />

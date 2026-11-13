@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { clearSelectedStudentClass, getSelectedStudentClass } from '../studentClass';
 import lyraLogo from '../assets/lyra-logo.jpg';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -22,6 +23,13 @@ export default function Login() {
             // Lấy thông tin user từ response trả về của API
             const userData = response.data.user || response.data;
             localStorage.setItem('user', JSON.stringify(userData));
+
+            // Mỗi lần đăng nhập chọn lại lớp mặc định của đúng tài khoản này,
+            // tránh dùng nhầm lớp đã chọn của tài khoản đăng nhập trước trên cùng máy.
+            clearSelectedStudentClass();
+            if (userData.role === 'Student') {
+                getSelectedStudentClass(userData);
+            }
 
             // Phân luồng điều hướng dựa theo Role
             if (userData.role === 'Admin') {

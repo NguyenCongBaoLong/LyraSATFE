@@ -7,6 +7,7 @@ export default function LogoutButton({ className }) {
     const handleLogout = () => {
         localStorage.removeItem('user');
         localStorage.removeItem('teacher_selected_class');
+        localStorage.removeItem('student_selected_class');
         navigate('/', { replace: true });
     };
 

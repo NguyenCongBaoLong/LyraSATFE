@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import StudentSidebar from '../components/StudentSidebar';
+import StudentClassSwitcher from '../components/StudentClassSwitcher';
 import NotificationBell from '../components/NotificationBell';
 import Pagination from '../components/Pagination';
+import { getSelectedStudentClass, onStudentClassChange } from '../studentClass';
 
 const PAGE_SIZE = 8;
 const tabStatuses = {
@@ -14,7 +16,14 @@ const tabStatuses = {
 };
 
 export default function Mission() {
-    const [user, setUser] = useState(null);
+    const [user] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('user'));
+        } catch {
+            return null;
+        }
+    });
+    const [selectedClass, setSelectedClass] = useState(() => (user ? getSelectedStudentClass(user) : ''));
     const [tests, setTests] = useState([]);
     const [activeTab, setActiveTab] = useState('Đang làm');
     const [page, setPage] = useState(1);
@@ -24,22 +33,28 @@ export default function Mission() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const storedUser = JSON.parse(localStorage.getItem('user'));
-        if (!storedUser) {
-            navigate('/');
-            return;
-        }
-        setUser(storedUser);
+        if (!user) navigate('/');
+    }, [navigate, user]);
 
-        const classCode = storedUser.classCode || 'SAT01';
+    // Học sinh đổi lớp ở đầu trang thì tải lại danh sách nhiệm vụ của lớp mới.
+    useEffect(() => onStudentClassChange(() => {
+        const storedUser = JSON.parse(localStorage.getItem('user'));
+        if (!storedUser) return;
+        setSelectedClass(getSelectedStudentClass(storedUser));
+        setPage(1);
+    }), []);
+
+    useEffect(() => {
+        if (!user || !selectedClass) return;
+
         setIsLoading(true);
         setLoadError('');
         setTests([]);
         const controller = new AbortController();
-        api.get(`/tests/class/${classCode}`, {
+        api.get(`/tests/class/${selectedClass}`, {
             params: {
                 status: tabStatuses[activeTab],
-                studentId: storedUser.id,
+                studentId: user.id,
                 page,
                 pageSize: PAGE_SIZE
             },
@@ -62,7 +77,7 @@ export default function Mission() {
         return () => {
             controller.abort();
         };
-    }, [activeTab, navigate, page]);
+    }, [activeTab, page, selectedClass, user]);
 
     if (!user) return null;
 
@@ -88,7 +103,7 @@ export default function Mission() {
                 <div className="flex justify-between items-center mb-8 bg-white p-5 rounded-3xl border border-pink-100 shadow-sm">
                     <div>
                         <h1 className="text-xl font-black text-pink-900">{user.fullName}</h1>
-                        <p className="text-xs text-slate-400 mt-0.5">Lớp: <span className="text-slate-700 font-semibold">{user.classCode}</span></p>
+                        <StudentClassSwitcher user={user} />
                     </div>
                     <div className="flex items-center gap-2">
                         <NotificationBell align="right" />
