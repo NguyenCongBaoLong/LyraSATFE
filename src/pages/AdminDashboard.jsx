@@ -375,6 +375,29 @@ export default function AdminDashboard() {
         }
     };
 
+    // Gỡ Học Sinh khỏi Lớp (khi thêm nhầm lớp) - KHÔNG xoá tài khoản, KHÔNG mất lịch sử làm bài
+    const handleRemoveStudentFromClass = async (studentId, studentName) => {
+        if (!selectedClassForStudents || !studentId) return;
+
+        const code = selectedClassForStudents.classCode || selectedClassForStudents.ClassCode;
+        const confirmed = window.confirm(
+            `Gỡ học viên "${studentName}" ra khỏi lớp ${code}?\n\nTài khoản và toàn bộ lịch sử làm bài của học viên vẫn được giữ nguyên.`
+        );
+        if (!confirmed) return;
+
+        try {
+            await api.post(`/tests/class/${code}/remove-student/${studentId}`);
+            showAlert(
+                "Đã gỡ khỏi lớp",
+                `Học viên "${studentName}" đã ra khỏi lớp ${code}. Tài khoản và lịch sử làm bài vẫn còn nguyên.`
+            );
+            handleOpenClassStudents(selectedClassForStudents, classStudentPage, 1);
+        } catch (err) {
+            console.error("Lỗi gỡ học sinh khỏi lớp:", err);
+            showAlert("Lỗi", err.response?.data?.message || "Không thể gỡ học viên khỏi lớp này.", "error");
+        }
+    };
+
     // Xử lý Thêm Giáo Viên vào Lớp (hỗ trợ phân công 2 - 4 giáo viên)
     const handleAddTeacherToClass = async (e) => {
         e.preventDefault();
@@ -581,6 +604,7 @@ export default function AdminDashboard() {
                 setStudentToAddId={setStudentToAddId}
                 isLoadingStudents={isLoadingStudents}
                 onAddStudent={handleAddStudentToClass}
+                onRemoveStudent={handleRemoveStudentFromClass}
                 classTeachers={classTeachers}
                 allTeachers={teachers}
                 teacherToAddId={teacherToAddId}

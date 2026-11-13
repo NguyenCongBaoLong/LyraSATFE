@@ -15,6 +15,7 @@ export default function ClassDetailModal({
     setStudentToAddId,
     isLoadingStudents,
     onAddStudent,
+    onRemoveStudent = () => {},
     // Quản lý 2-4 giáo viên của lớp
     classTeachers = [],
     allTeachers = [],
@@ -225,14 +226,24 @@ export default function ClassDetailModal({
                     ) : (
                         <div className="space-y-2">
                             {classStudents.map(s => (
-                                <div key={s.id ?? s.Id} className="p-3 bg-white border border-pink-100 rounded-xl flex justify-between items-center text-xs shadow-2xs">
-                                    <div>
-                                        <p className="font-bold text-slate-700">{s.fullName || s.FullName}</p>
-                                        <p className="text-slate-400 text-[11px]">{s.email || s.Email}</p>
+                                <div key={s.id ?? s.Id} className="p-3 bg-white border border-pink-100 rounded-xl flex justify-between items-center gap-3 text-xs shadow-2xs">
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-slate-700 truncate">{s.fullName || s.FullName}</p>
+                                        <p className="text-slate-400 text-[11px] truncate">{s.email || s.Email}</p>
                                     </div>
-                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                                        ID: {s.id ?? s.Id}
-                                    </span>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                                            ID: {s.id ?? s.Id}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => onRemoveStudent(s.id ?? s.Id, s.fullName || s.FullName)}
+                                            className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-bold rounded-lg transition cursor-pointer"
+                                            title="Gỡ học sinh khỏi lớp này, không xoá tài khoản và không mất lịch sử làm bài"
+                                        >
+                                            Gỡ khỏi lớp
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
