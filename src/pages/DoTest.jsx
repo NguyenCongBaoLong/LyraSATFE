@@ -591,7 +591,7 @@ export default function DoTest() {
                                             </div>
                                             <RichContent
                                                 content={opt.text}
-                                                className="text-sm font-medium text-slate-800 select-text cursor-text"
+                                                className="option-rich text-sm font-medium text-slate-800 select-text cursor-text"
                                             />
                                         </div>
                                     )

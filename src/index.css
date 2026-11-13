@@ -63,6 +63,25 @@
   vertical-align: top;
 }
 
+/* Bảng nằm trong một đáp án A-D: gọn lại để không phình khung đáp án. */
+.option-rich .rich-table-wrapper {
+  width: auto;
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+
+.option-rich .rich-table {
+  width: auto;
+  min-width: 0;
+  font-size: 0.9em;
+}
+
+.option-rich .rich-table td {
+  padding: 0.35rem 0.6rem;
+  white-space: nowrap;
+}
+
 .rich-table th,
 .rich-table tr:first-child td,
 .passage-content .passage-table tr:first-child td {

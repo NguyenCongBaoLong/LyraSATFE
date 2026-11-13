@@ -772,10 +772,10 @@ export default function TeacherOverview() {
                                                 }
                                                 return (
                                                     <div key={opt.key} className={`flex items-center gap-4 p-4 rounded-2xl border transition ${containerStyle}`}>
-                                                        <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs ${badgeStyle}`}>
+                                                        <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs shrink-0 ${badgeStyle}`}>
                                                             {opt.key}
                                                         </div>
-                                                        <span className="text-sm leading-relaxed">{opt.text}</span>
+                                                        <RichContent content={opt.text} className="option-rich text-sm leading-relaxed" />
                                                     </div>
                                                 );
                                             })}

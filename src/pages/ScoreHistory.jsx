@@ -443,7 +443,7 @@ export default function ScoreHistory() {
                                                         <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs ${badgeStyle}`}>
                                                             {opt.key}
                                                         </div>
-                                                        <RichContent content={opt.text} className="text-sm leading-relaxed" />
+                                                        <RichContent content={opt.text} className="option-rich text-sm leading-relaxed" />
                                                     </div>
                                                 );
                                             })}
