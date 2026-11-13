@@ -142,7 +142,8 @@ export default function DoTest() {
                                 optionA: q.optionA,
                                 optionB: q.optionB,
                                 optionC: q.optionC,
-                                optionD: q.optionD
+                                optionD: q.optionD,
+                                questionType: q.questionType || 'MultipleChoice'
                             };
                         }
 
@@ -153,7 +154,8 @@ export default function DoTest() {
                             optionA: q.optionA,
                             optionB: q.optionB,
                             optionC: q.optionC,
-                            optionD: q.optionD
+                            optionD: q.optionD,
+                            questionType: q.questionType || 'MultipleChoice'
                         };
                     });
                     setQuestions(formattedQuestions);
@@ -286,6 +288,19 @@ export default function DoTest() {
         setSelectedAnswers({
             ...selectedAnswers,
             [currentQ.id]: optionKey
+        });
+    };
+
+    // Câu tự luận: lưu nguyên chuỗi học sinh gõ; gõ rỗng thì coi như chưa trả lời.
+    const handleFreeResponseChange = (value) => {
+        setSelectedAnswers(prev => {
+            const next = { ...prev };
+            if (value.trim().length === 0) {
+                delete next[currentQ.id];
+            } else {
+                next[currentQ.id] = value;
+            }
+            return next;
         });
     };
 
@@ -524,7 +539,32 @@ export default function DoTest() {
                                 className="font-semibold text-sm md:text-[15px] text-slate-800 mb-6 leading-relaxed select-text cursor-text"
                             />
 
-                            {/* Các lựa chọn đáp án A, B, C, D */}
+                            {/* Câu tự luận: ô nhập đáp án. Câu trắc nghiệm: 4 lựa chọn A-D */}
+                            {currentQ.questionType === 'FreeResponse' ? (
+                                <div className="rounded-2xl border border-pink-200 bg-pink-50/40 p-4 md:p-5">
+                                    <label
+                                        htmlFor={`free-answer-${currentQ.id}`}
+                                        className="block text-xs font-black uppercase tracking-wider text-pink-700 mb-2"
+                                    >
+                                        Điền đáp án của bạn
+                                    </label>
+                                    <input
+                                        id={`free-answer-${currentQ.id}`}
+                                        type="text"
+                                        inputMode="decimal"
+                                        autoComplete="off"
+                                        autoCorrect="off"
+                                        spellCheck={false}
+                                        placeholder="Ví dụ: 3/2 hoặc 1.5"
+                                        value={selectedAnswers[currentQ.id] || ''}
+                                        onChange={(e) => handleFreeResponseChange(e.target.value)}
+                                        className="w-full md:w-72 px-4 py-3 rounded-xl border-2 border-pink-300 bg-white text-lg font-bold text-slate-800 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-200"
+                                    />
+                                    <p className="mt-2 text-[11px] text-slate-500 leading-relaxed">
+                                        Gõ số, phân số (3/2) hoặc số thập phân (1.5 hoặc 1,5). Không cần ghi đơn vị.
+                                    </p>
+                                </div>
+                            ) : (
                             <div className="space-y-3">
                                 {[
                                     { key: 'A', text: currentQ.optionA },
@@ -557,6 +597,7 @@ export default function DoTest() {
                                     )
                                 ))}
                             </div>
+                            )}
                         </div>
 
                         {/* Footer điều hướng ở chân thẻ */}

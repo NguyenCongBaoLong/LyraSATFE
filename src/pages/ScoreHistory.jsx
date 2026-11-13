@@ -380,7 +380,38 @@ export default function ScoreHistory() {
                                             </div>
                                         )}
 
-                                        {/* Danh sách lựa chọn A, B, C, D */}
+                                        {/* Câu tự luận: hiện đáp án học sinh gõ và các cách ghi được chấp nhận */}
+                                        {currentQ.questionType === 'FreeResponse' ? (
+                                            <div className={`rounded-2xl border p-4 space-y-3 ${currentQ.isCorrect ? 'border-emerald-300 bg-emerald-50/60' : 'border-rose-300 bg-rose-50/60'}`}>
+                                                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider">
+                                                    <span className={currentQ.isCorrect ? 'text-emerald-700' : 'text-rose-700'}>
+                                                        {currentQ.isCorrect ? 'Đúng' : 'Sai'}
+                                                    </span>
+                                                    <span className="text-slate-400 font-bold normal-case tracking-normal">câu tự luận</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Bạn trả lời</p>
+                                                    <p className={`text-lg font-black ${currentQ.isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                                        {currentQ.selectedAnswer?.trim() ? currentQ.selectedAnswer : '(bỏ trống)'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Đáp án đúng</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {(currentQ.acceptedAnswers || currentQ.correctAnswer || '')
+                                                            .split(/[|;]/)
+                                                            .map(value => value.trim())
+                                                            .filter(Boolean)
+                                                            .map((value, idx) => (
+                                                                <span key={`${value}-${idx}`} className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-sm font-bold text-emerald-700">
+                                                                    {value}
+                                                                </span>
+                                                            ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                        /* Danh sách lựa chọn A, B, C, D */
                                         <div className="space-y-3">
                                             {[
                                                 { key: 'A', text: currentQ.optionA },
@@ -417,6 +448,7 @@ export default function ScoreHistory() {
                                                 );
                                             })}
                                         </div>
+                                        )}
 
                                         {/* KHUNG THẢO LUẬN / BÌNH LUẬN DƯỚI CÂU HỎI */}
                                         <QuestionDiscussion 
