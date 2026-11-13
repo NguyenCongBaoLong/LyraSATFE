@@ -235,8 +235,10 @@ export default function TeacherUploadTest() {
                 </div>
 
                 <div className="rounded-2xl border border-pink-100 bg-pink-50/40 p-4 text-[11px] leading-relaxed text-slate-600 space-y-1">
+                    <p><span className="font-bold text-pink-700">Mở đầu câu:</span> Question 1. hoặc Câu 1. đều được; mỗi câu nên bắt đầu bằng số thứ tự.</p>
                     <p><span className="font-bold text-pink-700">Trắc nghiệm:</span> đủ 4 đáp án A, B, C, D và dòng đáp án, ví dụ <span className="font-bold">ANSWER: B</span>.</p>
                     <p><span className="font-bold text-pink-700">Tự luận (SAT Math):</span> không có A-D, chỉ ghi đáp án, ví dụ <span className="font-bold">ANSWER: 3/2 | 1.5 | 1,5</span>. Dấu gạch đứng ngăn các cách ghi đều được tính đúng.</p>
+                    <p><span className="font-bold text-pink-700">Công thức nhiều dòng:</span> mỗi dòng là một đoạn riêng, hệ thống giữ nguyên cách dòng khi hiển thị.</p>
                 </div>
 
                 <button 
