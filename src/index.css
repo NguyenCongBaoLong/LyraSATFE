@@ -48,15 +48,24 @@
 .rich-table,
 .passage-content .passage-table {
   width: 100%;
-  /* Bảng nhiều cột phải đủ chỗ mới đọc được: thà cuộn ngang còn hơn ép cột đến mức
-     chữ rơi xuống từng ký tự ("Spe / cie / s"). Số cột do backend gắn vào --rich-cols. */
-  min-width: max(22rem, calc(var(--rich-cols, 3) * 8rem));
+  min-width: 22rem;
   border-collapse: collapse;
   color: #334155;
   font-size: 0.95em;
   line-height: 1.5;
   table-layout: auto;
 }
+
+/* Bảng nhiều cột phải đủ chỗ mới đọc được: thà cuộn ngang còn hơn ép cột đến mức chữ
+   rơi xuống từng ký tự. Số cột do backend gắn vào class cols-N. */
+.rich-table.cols-3 { min-width: 24rem; }
+.rich-table.cols-4 { min-width: 32rem; }
+.rich-table.cols-5 { min-width: 40rem; }
+.rich-table.cols-6 { min-width: 48rem; }
+.rich-table.cols-7 { min-width: 56rem; }
+.rich-table.cols-8 { min-width: 64rem; }
+.rich-table.cols-9,
+.rich-table.cols-10 { min-width: 72rem; }
 
 .rich-table th,
 .rich-table td,
