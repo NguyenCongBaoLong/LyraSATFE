@@ -210,7 +210,31 @@ export default function DoTest() {
             setQuizResult(response.data);
         } catch (error) {
             console.error("Lỗi khi nộp bài:", error);
-            showAlert("Lỗi", "Không thể nộp bài lên hệ thống. Vui lòng thử lại!", () => submitHandlerRef.current?.());
+
+            const status = error.response?.status;
+            const serverMessage = error.response?.data?.message;
+
+            // Đề đã bị xoá hoặc không còn tồn tại: không thử lại vô ích, đưa học sinh về danh sách.
+            if (status === 404) {
+                showAlert(
+                    "Đề không còn tồn tại",
+                    serverMessage || "Đề này đã bị xoá nên không thể nộp bài. Vui lòng quay lại danh sách nhiệm vụ.",
+                    () => navigate('/mission')
+                );
+                return;
+            }
+
+            // Hết lượt làm bài (giáo viên giới hạn số lần): báo đúng lý do, không thử lại.
+            if (status === 400 && serverMessage) {
+                showAlert("Không nộp được bài", serverMessage, () => navigate('/mission'));
+                return;
+            }
+
+            showAlert(
+                "Lỗi",
+                serverMessage || "Không thể nộp bài lên hệ thống. Vui lòng thử lại!",
+                () => submitHandlerRef.current?.()
+            );
         } finally {
             isSubmittingRef.current = false;
             setIsSubmitting(false);
