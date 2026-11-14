@@ -48,11 +48,14 @@
 .rich-table,
 .passage-content .passage-table {
   width: 100%;
-  min-width: 22rem;
+  /* Bảng nhiều cột phải đủ chỗ mới đọc được: thà cuộn ngang còn hơn ép cột đến mức
+     chữ rơi xuống từng ký tự ("Spe / cie / s"). Số cột do backend gắn vào --rich-cols. */
+  min-width: max(22rem, calc(var(--rich-cols, 3) * 8rem));
   border-collapse: collapse;
   color: #334155;
   font-size: 0.95em;
   line-height: 1.5;
+  table-layout: auto;
 }
 
 .rich-table th,
@@ -61,6 +64,9 @@
   border: 1px solid #e2e8f0;
   padding: 0.65rem 0.8rem;
   vertical-align: top;
+  /* Không ngắt giữa từ; chỉ ngắt khi một từ dài hơn cả ô. */
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 /* Bảng nằm trong một đáp án A-D: gọn lại để không phình khung đáp án. */
