@@ -245,6 +245,9 @@ export default function TeacherUploadTest() {
                         <span className="font-bold text-pink-700">Điền đáp án:</span> Answer: 3/2 | 1.5 | 1,5 — dấu gạch đứng ngăn các cách ghi đều được tính đúng.
                     </p>
                     <p>
+                        <span className="font-bold text-pink-700">Bảng và biểu đồ:</span> bảng số liệu chèn bảng Word; biểu đồ/đồ thị chèn ảnh (Copy rồi Paste) ngay dưới đoạn muốn hiển thị. Ảnh cũng dùng được làm đáp án.
+                    </p>
+                    <p>
                         Số thứ tự câu không bắt buộc; một đề có thể trộn trắc nghiệm và tự luận.
                     </p>
                 </div>
