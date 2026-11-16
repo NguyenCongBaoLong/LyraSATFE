@@ -1,4 +1,6 @@
 import React, { useMemo } from 'react';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import { API_ORIGIN } from '../api';
 
 const ALLOWED_TAGS = new Set([
@@ -60,8 +62,29 @@ function sanitizeHtml(value) {
     return documentFragment.body.innerHTML;
 }
 
+function renderMath(html) {
+    if (!html.includes('math-inline') && !html.includes('math-block')) return html;
+
+    const documentFragment = new DOMParser().parseFromString(html, 'text/html');
+    documentFragment.body.querySelectorAll('.math-inline, .math-block').forEach(node => {
+        const tex = node.textContent || '';
+        const displayMode = node.classList.contains('math-block');
+        try {
+            node.innerHTML = katex.renderToString(tex, {
+                displayMode,
+                throwOnError: false,
+                strict: false,
+            });
+        } catch {
+            // Công thức lạ: giữ nguyên chữ thay vì làm vỡ cả câu hỏi.
+        }
+    });
+
+    return documentFragment.body.innerHTML;
+}
+
 export default function RichContent({ content, className = '' }) {
-    const html = useMemo(() => sanitizeHtml(content), [content]);
+    const html = useMemo(() => renderMath(sanitizeHtml(content)), [content]);
 
     if (!html) return null;
 

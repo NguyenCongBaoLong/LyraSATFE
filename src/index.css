@@ -109,3 +109,18 @@
 .passage-content .passage-table tr:nth-child(even) td {
   background: #f8fafc;
 }
+
+/* Công thức Word (OMML) được backend đổi sang LaTeX và vẽ bằng KaTeX. */
+.rich-content .math-block {
+  margin: 0.35rem 0 0.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.rich-content .math-block .katex-display {
+  margin: 0;
+}
+
+.rich-content .math-inline {
+  white-space: nowrap;
+}
