@@ -1,0 +1,6 @@
+# Không đưa file env local (trỏ localhost) lên Vercel,
+# nếu không build production sẽ gọi nhầm http://localhost:5029.
+.env.local
+.env.*.local
+.ai/
+dist/
