@@ -307,6 +307,9 @@ export default function DoTest() {
     }
 
     const currentQ = questions[currentIndex];
+    // Câu không có đoạn văn (phần lớn câu Toán) thì không dựng cột trái rỗng,
+    // cho câu hỏi dùng cả chiều ngang để dễ đọc hơn.
+    const hasPassage = Boolean(currentQ?.passageText && currentQ.passageText.trim());
 
     const handleSelectOption = (optionKey) => {
         setSelectedAnswers({
@@ -512,26 +515,22 @@ export default function DoTest() {
 
             {/* Khung chia đôi màn hình chuẩn giao diện SAT Bluebook (Ảnh 2) */}
             <div className="flex-1 p-3 md:p-5 bg-slate-100/70 overflow-hidden flex flex-col">
-                <TextHighlighter questionId={currentQ?.id} className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 h-full overflow-hidden">
-                    {/* Cột Trái: Đọc đoạn văn (Passage) - Đẩy lên đầu, không bị trôi ở giữa */}
+                <TextHighlighter questionId={currentQ?.id} className={`flex-1 grid grid-cols-1 ${hasPassage ? 'md:grid-cols-2' : ''} gap-4 md:gap-5 h-full overflow-hidden`}>
+                    {/* Cột Trái: Đọc đoạn văn (Passage) - chỉ hiện khi câu có đoạn văn */}
+                    {hasPassage && (
                     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
                         <div className="w-full text-left">
                             <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
-                            {currentQ.passageText ? (
-                                <RichContent
-                                    content={currentQ.passageText}
-                                    className="text-[15px] md:text-base leading-relaxed text-slate-800 font-sans select-text cursor-text text-left"
-                                />
-                            ) : (
-                                <p className="text-[15px] md:text-base leading-relaxed text-slate-800 font-sans select-text cursor-text text-left">
-                                    Đọc kỹ câu hỏi và các lựa chọn đáp án ở khung bên phải để hoàn thành câu hỏi.
-                                </p>
-                            )}
+                            <RichContent
+                                content={currentQ.passageText}
+                                className="text-[15px] md:text-base leading-relaxed text-slate-800 font-sans select-text cursor-text text-left"
+                            />
                         </div>
                     </div>
+                    )}
 
                     {/* Cột Phải: Câu hỏi và các lựa chọn đáp án theo chuẩn Ảnh 2 */}
-                    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 md:p-8 overflow-y-auto flex flex-col justify-between">
+                    <div className={`bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 md:p-8 overflow-y-auto flex flex-col justify-between ${hasPassage ? '' : 'w-full max-w-4xl mx-auto'}`}>
                         <div className="w-full text-left">
                             {/* Header câu hỏi: Badge số câu + Đánh dấu xem lại */}
                             <div className="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">

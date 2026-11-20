@@ -622,24 +622,20 @@ export default function TeacherOverview() {
                                 </div>
                             </div>
                         ) : currentQ ? (
-                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100 overflow-hidden">
-                                {/* Cột Trái: Passage - Căn đầu theo chuẩn */}
+                            <div className={`flex-1 grid grid-cols-1 ${currentQ.passageText ? 'md:grid-cols-2' : ''} gap-px bg-pink-100 overflow-hidden`}>
+                                {/* Cột Trái: Passage - chỉ dựng khi câu có đoạn văn */}
+                                {currentQ.passageText && (
                                 <div className="bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
                                     <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
-                                    {currentQ.passageText ? (
-                                        <RichContent
-                                            content={currentQ.passageText}
-                                            className="passage-content text-[15px] leading-relaxed text-slate-800 font-sans text-left"
-                                        />
-                                    ) : (
-                                        <p className="text-[15px] leading-relaxed text-slate-800 font-sans text-left">
-                                            Đọc kỹ câu hỏi và các lựa chọn đáp án ở khung bên phải.
-                                        </p>
-                                    )}
+                                    <RichContent
+                                        content={currentQ.passageText}
+                                        className="passage-content text-[15px] leading-relaxed text-slate-800 font-sans text-left"
+                                    />
                                 </div>
+                                )}
 
                                 {/* Cột Phải: Question & Discussion */}
-                                <div className="bg-white p-10 overflow-y-auto flex flex-col justify-between">
+                                <div className={`bg-white p-10 overflow-y-auto flex flex-col justify-between ${currentQ.passageText ? '' : 'w-full max-w-4xl mx-auto'}`}>
                                     <div>
                                         <RichContent
                                             content={currentQ.questionText}
