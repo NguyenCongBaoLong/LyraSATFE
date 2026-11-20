@@ -42,6 +42,8 @@ const VULGAR_FRACTIONS = {
 
 function isPlainMath(text) {
     if (!text || text.length > 200) return false;
+    // Hệ phương trình nhiều dòng để nguyên, bọc span sẽ làm mất xuống dòng.
+    if (text.includes('\n') || text.includes('\r')) return false;
     // Giáo viên gõ tay LaTeX (có dấu \) thì để nguyên, không chuyển nữa.
     if (text.includes('\\')) return false;
     // Có chữ tiếng Việt là câu văn, không phải công thức.
