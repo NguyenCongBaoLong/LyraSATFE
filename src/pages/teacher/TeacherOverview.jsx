@@ -70,6 +70,7 @@ export default function TeacherOverview() {
     const [qVideoSaving, setQVideoSaving] = useState(false);
     const [qVideoError, setQVideoError] = useState('');
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: reset video input when switching question or submission
     useEffect(() => {
         setQVideoInput('');
         setQVideoEditing(false);
@@ -236,6 +237,7 @@ export default function TeacherOverview() {
     }, [searchParams]);
 
     // Khi danh sách bài nộp đã tải xong thì mở đúng bài của học sinh (hoặc bài mới nhất).
+    // biome-ignore lint/correctness/useExhaustiveDependencies: deep-link triggers once when submissions load
     useEffect(() => {
         if (!pendingDeepLink) return;
         if (!testSubmissions.length) return;
@@ -276,6 +278,7 @@ export default function TeacherOverview() {
                 <div className="flex items-center gap-2.5 w-full sm:w-auto flex-wrap">
                     {openTeachersModal && (
                         <button 
+                            type="button"
                             onClick={openTeachersModal}
                             className="flex-1 sm:flex-none bg-pink-50 border border-pink-200 hover:bg-pink-100 text-pink-700 text-xs font-extrabold px-3.5 py-2.5 rounded-2xl transition shadow-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
                             title="Xem và quản lý đội ngũ giáo viên phụ trách lớp"
@@ -285,6 +288,7 @@ export default function TeacherOverview() {
                         </button>
                     )}
                     <button 
+                        type="button"
                         onClick={() => navigate('/teacher/vocab-upload')}
                         className="flex-1 sm:flex-none bg-white border-2 border-pink-200 hover:bg-pink-50 hover:border-pink-300 text-pink-700 text-xs font-extrabold px-4 py-2.5 rounded-2xl transition shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                     >
@@ -293,6 +297,7 @@ export default function TeacherOverview() {
                     </button>
 
                     <button 
+                        type="button"
                         onClick={() => navigate('/teacher/upload')}
                         className="flex-1 sm:flex-none bg-pink-500 hover:bg-pink-600 active:bg-pink-700 text-white text-xs font-extrabold px-4 py-2.5 rounded-2xl transition shadow-md shadow-pink-500/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                     >
@@ -327,9 +332,18 @@ export default function TeacherOverview() {
                 ) : (
                     <div className="space-y-3">
                         {tests.map(test => (
+                            // biome-ignore lint/a11y/useSemanticElements: test card wraps block summary elements
                             <div 
                                 key={test.id} 
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => handleViewTestDetail(test)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleViewTestDetail(test);
+                                    }
+                                }}
                                 className="p-4 rounded-2xl bg-pink-50/40 border border-pink-100 hover:border-pink-300 hover:bg-pink-50/80 transition flex justify-between items-center cursor-pointer shadow-sm"
                             >
                                 <div>
@@ -430,6 +444,7 @@ export default function TeacherOverview() {
                                     <span>Xóa bài test</span>
                                 </button>
                                 <button 
+                                    type="button"
                                     onClick={() => setSelectedTest(null)}
                                     className="w-8 h-8 rounded-full bg-pink-50 hover:bg-pink-100 text-pink-600 flex items-center justify-center font-bold text-xs transition cursor-pointer"
                                 >
@@ -500,6 +515,7 @@ export default function TeacherOverview() {
 
                         <div className="mt-8 pt-4 border-t border-pink-100 text-right">
                             <button 
+                                type="button"
                                 onClick={() => setSelectedTest(null)}
                                 className="px-6 py-2.5 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs transition cursor-pointer shadow-md shadow-pink-600/20"
                             >
@@ -744,9 +760,9 @@ export default function TeacherOverview() {
                                                         {(currentQ.acceptedAnswers || currentQ.correctAnswer || '')
                                                             .split(/[|;]/)
                                                             .map(value => value.trim())
-                                                            .filter(Boolean)
-                                                            .map((value, idx) => (
-                                                                <span key={`${value}-${idx}`} className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-sm font-bold text-emerald-700">
+                                                            .filter((value, pos, arr) => Boolean(value) && arr.indexOf(value) === pos)
+                                                            .map(value => (
+                                                                <span key={value} className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-sm font-bold text-emerald-700">
                                                                     {value}
                                                                 </span>
                                                             ))}

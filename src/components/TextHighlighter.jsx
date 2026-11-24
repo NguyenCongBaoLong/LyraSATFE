@@ -100,7 +100,7 @@ export default function TextHighlighter({
                             toDelete.push(range);
                         }
                     }
-                    toDelete.forEach(r => hl.delete(r));
+                    toDelete.forEach(r => { hl.delete(r); });
                 }
             });
         }
@@ -123,6 +123,7 @@ export default function TextHighlighter({
     }, []);
 
     // Handle question lifecycle synchronization with external Highlight API
+    // biome-ignore lint/correctness/useExhaustiveDependencies: reset highlights when questionId changes
     useEffect(() => {
         cleanupDomHighlights();
 
@@ -305,7 +306,7 @@ export default function TextHighlighter({
                             toDelete.push(r);
                         }
                     }
-                    toDelete.forEach(r => hl.delete(r));
+                    toDelete.forEach(r => { hl.delete(r); });
                 }
             });
         }
@@ -334,6 +335,7 @@ export default function TextHighlighter({
     };
 
     return (
+        // biome-ignore lint/a11y/noStaticElementInteractions: container tracks mouseup for text selection highlighting
         <div
             ref={containerRef}
             onMouseUp={handleMouseUp}
@@ -343,8 +345,11 @@ export default function TextHighlighter({
 
             {/* Floating Highlight Toolbar */}
             {toolbarState.visible && (
+                // biome-ignore lint/a11y/noStaticElementInteractions: preserves browser text selection on toolbar mousedown
                 <div
                     id="sat-floating-highlighter-toolbar"
+                    role="toolbar"
+                    aria-label="Highlight toolbar"
                     style={{
                         position: 'fixed',
                         left: `${toolbarState.x}px`,

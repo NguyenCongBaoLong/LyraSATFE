@@ -30,6 +30,7 @@ export default function VocabList() {
     const navigate = useNavigate();
 
     // Tải từng trang danh sách lớp học.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: retryTick triggers manual refetch
     useEffect(() => {
         setLoadError('');
         const controller = new AbortController();
@@ -55,6 +56,7 @@ export default function VocabList() {
     }, [classPage, retryTick]);
 
     // Tải danh sách series cho lớp và trang hiện tại.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: retryTick triggers manual refetch
     useEffect(() => {
         if (!selectedClass) return;
         setLoadError('');
@@ -90,6 +92,7 @@ export default function VocabList() {
     };
 
     // Tải bộ thẻ theo trang để không lấy toàn bộ từ vựng cùng lúc.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: retryTick triggers manual refetch
     useEffect(() => {
         if (!selectedClass || !selectedSeries || !studyMode) return;
         setLoadError('');
@@ -176,15 +179,15 @@ export default function VocabList() {
 
                     <div className="flex items-center gap-3">
                         {studyMode ? (
-                            <button onClick={() => setStudyMode(false)} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
+                            <button type="button" onClick={() => setStudyMode(false)} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
                                 ← Quay lại chọn Series
                             </button>
                         ) : selectedClass ? (
-                            <button onClick={() => setSelectedClass(null)} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
+                            <button type="button" onClick={() => setSelectedClass(null)} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
                                 ← Chọn lớp khác
                             </button>
                         ) : (
-                            <button onClick={() => navigate('/home')} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
+                            <button type="button" onClick={() => navigate('/home')} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
                                 ← Về trang chủ
                             </button>
                         )}
@@ -212,19 +215,20 @@ export default function VocabList() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                            {classList.map((cls, index) => (
-                                <div 
-                                    key={index} 
+                            {classList.map((cls) => (
+                                <button
+                                    type="button"
+                                    key={cls}
                                     onClick={() => handleSelectClass(cls)}
-                                    className="bg-white p-6 rounded-3xl border border-pink-100 hover:border-pink-400 hover:shadow-lg cursor-pointer transition text-center group"
+                                    className="w-full bg-white p-6 rounded-3xl border border-pink-100 hover:border-pink-400 hover:shadow-lg cursor-pointer transition text-center group"
                                 >
                                     <div className="text-4xl mb-3 group-hover:scale-110 transition">🏫</div>
                                     <h3 className="font-extrabold text-pink-700 text-lg mb-1">Lớp {cls}</h3>
                                     <p className="text-xs text-slate-400">Xem khóa học từ vựng</p>
-                                    <button className="mt-4 px-4 py-2 bg-pink-500 group-hover:bg-pink-600 text-white text-xs font-bold rounded-xl transition shadow-md shadow-pink-500/20">
+                                    <span className="inline-block mt-4 px-4 py-2 bg-pink-500 group-hover:bg-pink-600 text-white text-xs font-bold rounded-xl transition shadow-md shadow-pink-500/20">
                                         Vào lớp →
-                                    </button>
-                                </div>
+                                    </span>
+                                </button>
                             ))}
                         </div>
                     )}
@@ -244,19 +248,20 @@ export default function VocabList() {
                     ) : (
                         <>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-                            {seriesList.map((s, index) => (
-                                <div 
-                                    key={index} 
+                            {seriesList.map((s) => (
+                                <button
+                                    type="button"
+                                    key={s}
                                     onClick={() => handleSelectSeries(s)}
-                                    className="bg-white p-6 rounded-3xl border border-pink-100 hover:border-pink-400 hover:shadow-lg cursor-pointer transition text-center group"
+                                    className="w-full bg-white p-6 rounded-3xl border border-pink-100 hover:border-pink-400 hover:shadow-lg cursor-pointer transition text-center group"
                                 >
                                     <div className="text-4xl mb-3 group-hover:scale-110 transition">📖</div>
                                     <h3 className="font-extrabold text-pink-700 text-lg mb-1">{s}</h3>
                                     <p className="text-xs text-slate-400">Lớp: {selectedClass}</p>
-                                    <button className="mt-4 px-4 py-2 bg-pink-500 group-hover:bg-pink-600 text-white text-xs font-bold rounded-xl transition shadow-md shadow-pink-500/20">
+                                    <span className="inline-block mt-4 px-4 py-2 bg-pink-500 group-hover:bg-pink-600 text-white text-xs font-bold rounded-xl transition shadow-md shadow-pink-500/20">
                                         Xem từ vựng →
-                                    </button>
-                                </div>
+                                    </span>
+                                </button>
                             ))}
                         </div>
                         <Pagination
@@ -287,8 +292,17 @@ export default function VocabList() {
                                 Đang tải từ vựng...
                             </div>
                         ) : currentCard ? (
+                            // biome-ignore lint/a11y/useSemanticElements: flashcard contains nested audio button
                             <div
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => setIsFlipped(!isFlipped)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        setIsFlipped(prev => !prev);
+                                    }
+                                }}
                                 className="w-full min-h-[340px] bg-white rounded-3xl border border-pink-100 shadow-md p-8 flex flex-col justify-between items-center text-center cursor-pointer hover:shadow-xl transition-all duration-300 relative select-none"
                             >
                                 <span className="absolute top-4 right-6 text-[11px] font-bold text-pink-400 uppercase tracking-wider">
@@ -301,7 +315,7 @@ export default function VocabList() {
                                         <h2 className="text-4xl font-black text-pink-600 mb-4">{currentCard.word}</h2>
                                         <div className="flex items-center gap-2 text-slate-500 text-sm font-semibold">
                                             <span>UK</span>
-                                            <button onClick={(e) => { e.stopPropagation(); handleSpeak(currentCard.word); }} className="hover:text-pink-600 transition p-1">
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); handleSpeak(currentCard.word); }} onKeyDown={(e) => e.stopPropagation()} className="hover:text-pink-600 transition p-1">
                                                 🔊
                                             </button>
                                             {currentCard.phonetic && <span>/{currentCard.phonetic}/</span>}
@@ -339,6 +353,7 @@ export default function VocabList() {
                         {/* Nút điều hướng */}
                         <div className="flex items-center gap-6 mt-8">
                             <button 
+                                type="button"
                                 onClick={() => {
                                     if (currentIndex > 0) {
                                         setCurrentIndex(currentIndex - 1);
@@ -356,6 +371,7 @@ export default function VocabList() {
                             </button>
 
                             <button 
+                                type="button"
                                 onClick={() => handleSpeak(currentCard?.word)}
                                 className="px-6 py-3 bg-pink-100 hover:bg-pink-200 text-pink-700 text-xs font-extrabold rounded-2xl transition cursor-pointer"
                             >
@@ -363,6 +379,7 @@ export default function VocabList() {
                             </button>
 
                             <button 
+                                type="button"
                                 onClick={() => {
                                     if (currentIndex < vocabList.length - 1) {
                                         setCurrentIndex(currentIndex + 1);

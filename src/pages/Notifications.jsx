@@ -164,9 +164,18 @@ export default function Notifications() {
                         </div>
                     ) : (
                         items.map((n) => (
+                            // biome-ignore lint/a11y/useSemanticElements: card wraps block notification layout
                             <div
                                 key={n.id}
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => handleClickNotification(n)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleClickNotification(n);
+                                    }
+                                }}
                                 className={`p-4 hover:bg-pink-50/60 transition cursor-pointer flex items-start gap-3 ${
                                     !n.isRead ? 'bg-pink-50/30' : ''
                                 }`}

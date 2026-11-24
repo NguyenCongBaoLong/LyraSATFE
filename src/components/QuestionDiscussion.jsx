@@ -791,7 +791,6 @@ export default function QuestionDiscussion({
                                             onChange={(e) => setReplyText(e.target.value)}
                                             placeholder={`Trả lời @${comment.authorName}...`}
                                             rows={2}
-                                            autoFocus
                                             className="w-full bg-transparent resize-none text-xs text-slate-700 placeholder-slate-400 focus:outline-none"
                                         />
                                         <div className="flex justify-end gap-2 pt-1 border-t border-pink-200/50 mt-1">

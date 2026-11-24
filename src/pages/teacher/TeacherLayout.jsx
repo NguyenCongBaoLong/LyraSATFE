@@ -134,7 +134,7 @@ export default function TeacherLayout() {
                     {/* Dropdown chọn lớp học & Nút Quản lý Đội ngũ Giáo viên */}
                     <div className="mb-6 bg-pink-50/60 p-4 rounded-2xl border border-pink-100">
                         <div className="flex items-center justify-between mb-2">
-                            <label className="block text-[10px] font-black uppercase text-pink-500 tracking-wider">
+                            <label htmlFor="teacher-class-select" className="block text-[10px] font-black uppercase text-pink-500 tracking-wider">
                                 Lớp đang quản lý
                             </label>
                             {selectedClass && (
@@ -155,7 +155,7 @@ export default function TeacherLayout() {
                             </div>
                         ) : (
                             <select 
-                                value={selectedClass} 
+                                id="teacher-class-select" value={selectedClass} 
                                 onChange={(e) => handleClassChange(e.target.value)}
                                 className="w-full bg-white border border-pink-200 text-slate-700 text-xs font-bold px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 cursor-pointer shadow-sm"
                             >
@@ -190,6 +190,7 @@ export default function TeacherLayout() {
 
                     <div className="space-y-2">
                         <button 
+                            type="button"
                             onClick={() => navigate('/teacher/overview')} 
                             aria-current={isActive('/teacher/overview') ? 'page' : undefined}
                             className={`w-full text-left px-4 py-3 rounded-2xl font-semibold transition text-sm ${isActive('/teacher/overview') ? 'bg-pink-500 text-white font-bold shadow-md shadow-pink-500/20' : 'text-slate-500 hover:bg-pink-50 hover:text-pink-600'}`}
@@ -197,6 +198,7 @@ export default function TeacherLayout() {
                              📊 Tổng quan & Quản lý bài test
                         </button>
                         <button 
+                            type="button"
                             onClick={() => navigate('/teacher/students')} 
                             aria-current={isActive('/teacher/students') ? 'page' : undefined}
                             className={`w-full text-left px-4 py-3 rounded-2xl font-semibold transition text-sm ${isActive('/teacher/students') ? 'bg-pink-500 text-white font-bold shadow-md shadow-pink-500/20' : 'text-slate-500 hover:bg-pink-50 hover:text-pink-600'}`}
@@ -204,6 +206,7 @@ export default function TeacherLayout() {
                              Danh sách học viên
                         </button>
                         <button 
+                            type="button"
                             onClick={() => navigate('/teacher/upload')} 
                             aria-current={isActive('/teacher/upload') ? 'page' : undefined}
                             className={`w-full text-left px-4 py-3 rounded-2xl font-semibold transition text-sm ${isActive('/teacher/upload') ? 'bg-pink-500 text-white font-bold shadow-md shadow-pink-500/20' : 'text-slate-500 hover:bg-pink-50 hover:text-pink-600'}`}
@@ -211,6 +214,7 @@ export default function TeacherLayout() {
                              📝 Giao bài & Xóa bài test
                         </button>
                         <button 
+                            type="button"
                             onClick={() => navigate('/teacher/vocab-upload')} 
                             aria-current={isActive('/teacher/vocab-upload') ? 'page' : undefined}
                             className={`w-full text-left px-4 py-3 rounded-2xl font-semibold transition text-sm ${isActive('/teacher/vocab-upload') ? 'bg-pink-500 text-white font-bold shadow-md shadow-pink-500/20' : 'text-slate-500 hover:bg-pink-50 hover:text-pink-600'}`}
@@ -239,6 +243,7 @@ export default function TeacherLayout() {
             {/* Mobile Bottom Navigation Bar */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-pink-100 py-2 px-3 flex items-center justify-around z-40 shadow-lg">
                 <button 
+                    type="button"
                     onClick={() => navigate('/teacher/overview')} 
                     className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/teacher/overview') ? 'text-pink-600' : 'text-slate-400'}`}
                 >
@@ -246,6 +251,7 @@ export default function TeacherLayout() {
                     <span>Tổng quan</span>
                 </button>
                 <button 
+                    type="button"
                     onClick={() => navigate('/teacher/students')} 
                     className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/teacher/students') ? 'text-pink-600' : 'text-slate-400'}`}
                 >
@@ -253,6 +259,7 @@ export default function TeacherLayout() {
                     <span>Học viên</span>
                 </button>
                 <button 
+                    type="button"
                     onClick={() => navigate('/teacher/upload')} 
                     className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/teacher/upload') ? 'text-pink-600' : 'text-slate-400'}`}
                 >
@@ -260,6 +267,7 @@ export default function TeacherLayout() {
                     <span>Giao bài</span>
                 </button>
                 <button 
+                    type="button"
                     onClick={() => navigate('/teacher/vocab-upload')} 
                     className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${isActive('/teacher/vocab-upload') ? 'text-pink-600' : 'text-slate-400'}`}
                 >

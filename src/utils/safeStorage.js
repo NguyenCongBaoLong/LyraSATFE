@@ -33,7 +33,7 @@ export function clearTestSessionStorage() {
                 keys.push(key);
             }
         }
-        keys.forEach((key) => sessionStorage.removeItem(key));
+        keys.forEach((key) => { sessionStorage.removeItem(key); });
     } catch {
         // Ignore storage cleanup errors
     }

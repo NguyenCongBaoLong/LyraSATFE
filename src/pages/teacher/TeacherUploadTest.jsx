@@ -28,6 +28,7 @@ export default function TeacherUploadTest() {
     // Đề đang mở hộp thoại gắn video chữa bài (thêm video SAU khi đã up đề)
     const [videoTest, setVideoTest] = useState(null);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional refresh trigger
     useEffect(() => {
         if (!selectedClass) return;
         setIsLoadingTests(true);
@@ -153,8 +154,9 @@ export default function TeacherUploadTest() {
             
             <form onSubmit={handleUploadTest} className="space-y-4">
                 <div>
-                    <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Tiêu đề bài test</label>
+                    <label htmlFor="upload-test-title" className="block text-xs font-bold uppercase text-slate-400 mb-1">Tiêu đề bài test</label>
                     <input 
+                        id="upload-test-title"
                         type="text" 
                         required
                         placeholder="Ví dụ: Practice Test 01 - Reading & Writing" 
@@ -166,8 +168,9 @@ export default function TeacherUploadTest() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                        <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Thời gian (Phút)</label>
+                        <label htmlFor="upload-test-duration" className="block text-xs font-bold uppercase text-slate-400 mb-1">Thời gian (Phút)</label>
                         <input 
+                            id="upload-test-duration"
                             type="number" 
                             value={duration}
                             onChange={(e) => setDuration(e.target.value)}
@@ -175,8 +178,9 @@ export default function TeacherUploadTest() {
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Loại bài test</label>
+                        <label htmlFor="upload-test-type" className="block text-xs font-bold uppercase text-slate-400 mb-1">Loại bài test</label>
                         <select 
+                            id="upload-test-type"
                             value={testType}
                             onChange={(e) => setTestType(e.target.value)}
                             className="w-full px-4 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -186,8 +190,9 @@ export default function TeacherUploadTest() {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Số lần làm tối đa</label>
+                        <label htmlFor="upload-test-max-attempts" className="block text-xs font-bold uppercase text-slate-400 mb-1">Số lần làm tối đa</label>
                         <input 
+                            id="upload-test-max-attempts"
                             type="number" 
                             min="1"
                             placeholder="Để trống = Vô hạn"
@@ -199,8 +204,9 @@ export default function TeacherUploadTest() {
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Hạn nộp bài (Deadline)</label>
+                    <label htmlFor="upload-test-deadline" className="block text-xs font-bold uppercase text-slate-400 mb-1">Hạn nộp bài (Deadline)</label>
                     <input 
+                        id="upload-test-deadline"
                         type="datetime-local"
                         value={deadline}
                         onChange={(e) => setDeadline(e.target.value)}
@@ -209,10 +215,11 @@ export default function TeacherUploadTest() {
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold uppercase text-slate-400 mb-1">
+                    <label htmlFor="upload-test-video" className="block text-xs font-bold uppercase text-slate-400 mb-1">
                         Link Video YouTube chữa đề & giải thích chi tiết (ở cuối bài test)
                     </label>
                     <input 
+                        id="upload-test-video"
                         type="url"
                         placeholder="Ví dụ: https://www.youtube.com/watch?v=aqz-KE-bpKQ"
                         value={videoExplanationUrl}
@@ -226,8 +233,9 @@ export default function TeacherUploadTest() {
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Tải lên file câu hỏi (.docx Word)</label>
+                    <label htmlFor="upload-test-file" className="block text-xs font-bold uppercase text-slate-400 mb-1">Tải lên file câu hỏi (.docx Word)</label>
                     <input 
+                        id="upload-test-file"
                         type="file" 
                         accept=".docx"
                         onChange={(e) => setFile(e.target.files[0])}
@@ -372,6 +380,7 @@ export default function TeacherUploadTest() {
                         </p>
 
                         <button
+                            type="button"
                             onClick={closeModal}
                             className="w-full py-3 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-md shadow-pink-600/20 transition cursor-pointer"
                         >

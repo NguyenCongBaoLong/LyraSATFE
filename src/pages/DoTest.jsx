@@ -345,12 +345,14 @@ export default function DoTest() {
 
                     <div className="flex flex-col sm:flex-row gap-3">
                         <button 
+                            type="button"
                             onClick={() => navigate('/score')}
                             className="flex-1 py-3 bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs rounded-2xl shadow-md shadow-pink-600/20 transition cursor-pointer"
                         >
                             Xem lại bài làm & Thảo luận
                         </button>
                         <button 
+                            type="button"
                             onClick={() => navigate('/mission')}
                             className="flex-1 py-3 bg-white border border-pink-200 hover:bg-pink-50 text-slate-700 font-bold text-xs rounded-2xl transition cursor-pointer"
                         >
@@ -442,10 +444,10 @@ export default function DoTest() {
                             <span>🍈</span>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-3 w-full">
-                            <button onClick={() => navigate('/score')} className="flex-1 py-3 px-6 bg-pink-600 hover:bg-pink-700 text-white font-extrabold text-xs rounded-2xl shadow-md shadow-pink-600/30 transition">
+                            <button type="button" onClick={() => navigate('/score')} className="flex-1 py-3 px-6 bg-pink-600 hover:bg-pink-700 text-white font-extrabold text-xs rounded-2xl shadow-md shadow-pink-600/30 transition">
                                 Bài làm & Thảo luận
                             </button>
-                            <button onClick={() => navigate('/mission')} className="flex-1 py-3 px-6 bg-white border border-pink-200 hover:bg-pink-50 text-slate-700 font-extrabold text-xs rounded-2xl transition">
+                            <button type="button" onClick={() => navigate('/mission')} className="flex-1 py-3 px-6 bg-white border border-pink-200 hover:bg-pink-50 text-slate-700 font-extrabold text-xs rounded-2xl transition">
                                 Quay lại danh sách nhiệm vụ
                             </button>
                         </div>
@@ -467,6 +469,7 @@ export default function DoTest() {
                             </div>
                         </div>
                         <button
+                            type="button"
                             onClick={() => navigate('/score')}
                             className="w-full py-3 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-black shadow-md shadow-pink-600/20 transition cursor-pointer"
                         >
@@ -482,7 +485,7 @@ export default function DoTest() {
         <div className="min-h-screen bg-[#FFF5F7] text-slate-800 flex flex-col font-sans select-none relative">
             {/* Header */}
             <div className="bg-white border-b border-pink-100 px-6 py-3 flex justify-between items-center shadow-sm">
-                <button onClick={handleExitTest} className="text-xs font-bold text-pink-600 hover:text-pink-800 transition flex items-center gap-1 cursor-pointer">
+                <button type="button" onClick={handleExitTest} className="text-xs font-bold text-pink-600 hover:text-pink-800 transition flex items-center gap-1 cursor-pointer">
                     ‹ Thoát bài thi
                 </button>
                 <div className="text-xs font-bold text-slate-700 tracking-wide">
@@ -490,6 +493,7 @@ export default function DoTest() {
                 </div>
                 <div className="flex items-center gap-3">
                     <button 
+                        type="button"
                         onClick={() => setShowPalette(!showPalette)}
                         className="bg-pink-100 hover:bg-pink-200 text-pink-700 px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
                     >
@@ -508,9 +512,11 @@ export default function DoTest() {
 
             {/* Question navigation dialog */}
             {showPalette && (
+                // biome-ignore lint/a11y/noStaticElementInteractions: backdrop overlay closes dialog on click
                 <div
                     className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
                     onClick={() => setShowPalette(false)}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setShowPalette(false); }}
                 >
                     <section
                         role="dialog"
@@ -518,6 +524,13 @@ export default function DoTest() {
                         aria-labelledby="question-palette-title"
                         className="w-full max-w-2xl rounded-3xl border border-pink-100 bg-white p-5 shadow-2xl sm:p-7"
                         onClick={event => event.stopPropagation()}
+                        onKeyDown={event => {
+                            if (event.key === 'Escape') {
+                                setShowPalette(false);
+                            } else {
+                                event.stopPropagation();
+                            }
+                        }}
                     >
                         <div className="mb-5 flex items-center justify-between">
                             <div>
@@ -660,9 +673,18 @@ export default function DoTest() {
                                     { key: 'D', text: currentQ.optionD }
                                 ].map(opt => (
                                     opt.text && (
+                                        // biome-ignore lint/a11y/useSemanticElements: option row keeps rich math/text selectable and contains block content
                                         <div 
                                             key={opt.key}
+                                            role="button"
+                                            tabIndex={0}
                                             onClick={() => handleSelectOption(opt.key)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.preventDefault();
+                                                    handleSelectOption(opt.key);
+                                                }
+                                            }}
                                             className={`flex items-center gap-3.5 p-3.5 md:p-4 rounded-2xl border cursor-pointer transition ${
                                                 selectedAnswers[currentQ.id] === opt.key 
                                                     ? 'border-pink-500 bg-pink-50/50 shadow-xs ring-1 ring-pink-500' 
@@ -690,6 +712,7 @@ export default function DoTest() {
                         {/* Footer điều hướng ở chân thẻ */}
                         <div className="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
                             <button 
+                                type="button"
                                 disabled={currentIndex === 0}
                                 onClick={() => setCurrentIndex(prev => prev - 1)}
                                 className={`px-5 py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center gap-1 ${
@@ -702,6 +725,7 @@ export default function DoTest() {
                             </button>
 
                             <button 
+                                type="button"
                                 onClick={() => setShowPalette(!showPalette)}
                                 className="text-xs font-black text-slate-700 hover:text-pink-600 bg-slate-100 hover:bg-pink-50 border border-slate-200 px-4 py-2 rounded-xl transition cursor-pointer shadow-xs flex items-center gap-1.5"
                             >
@@ -711,6 +735,7 @@ export default function DoTest() {
 
                             {currentIndex < questions.length - 1 ? (
                                 <button 
+                                    type="button"
                                     onClick={() => setCurrentIndex(prev => prev + 1)}
                                     className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer flex items-center gap-1"
                                 >
@@ -719,6 +744,7 @@ export default function DoTest() {
                                 </button>
                             ) : (
                                 <button 
+                                    type="button"
                                     onClick={handleOpenSubmitModal}
                                     className="px-6 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold shadow-md shadow-pink-600/20 transition cursor-pointer"
                                 >
@@ -744,15 +770,15 @@ export default function DoTest() {
                         <div className="flex gap-3 justify-center">
                             {modalConfig.type === 'confirm' ? (
                                 <>
-                                    <button onClick={closeModal} className="px-6 py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition flex-1 cursor-pointer">
+                                    <button type="button" onClick={closeModal} className="px-6 py-3 rounded-2xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition flex-1 cursor-pointer">
                                         Làm tiếp
                                     </button>
-                                    <button onClick={() => { if (modalConfig.onConfirm) modalConfig.onConfirm(); }} disabled={isSubmitting} className="px-6 py-3 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-md shadow-pink-600/20 transition flex-1 cursor-pointer">
+                                    <button type="button" onClick={() => { if (modalConfig.onConfirm) modalConfig.onConfirm(); }} disabled={isSubmitting} className="px-6 py-3 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-md shadow-pink-600/20 transition flex-1 cursor-pointer">
                                         {isSubmitting ? 'Đang nộp...' : 'Đồng ý'}
                                     </button>
                                 </>
                             ) : (
-                                <button onClick={() => { closeModal(); if (modalConfig.onConfirm) modalConfig.onConfirm(); }} className="px-8 py-3 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-md shadow-pink-600/20 transition w-full cursor-pointer">
+                                <button type="button" onClick={() => { closeModal(); if (modalConfig.onConfirm) modalConfig.onConfirm(); }} className="px-8 py-3 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-md shadow-pink-600/20 transition w-full cursor-pointer">
                                     Đồng ý
                                 </button>
                             )}

@@ -90,6 +90,7 @@ export default function ScoreHistory() {
     };
 
     // Deep-link từ thông báo: mở đúng bài nộp của đề, nhảy đúng câu hỏi và bình luận.
+    // biome-ignore lint/correctness/useExhaustiveDependencies: deep-link runs once per searchParams and user change
     useEffect(() => {
         const linkKey = searchParams.toString();
         const testIdParam = searchParams.get('testId');
@@ -179,6 +180,7 @@ export default function ScoreHistory() {
                                 <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end flex-wrap">
                                     {(item.videoCount > 0 || item.videoExplanationUrl) && (
                                         <button 
+                                            type="button"
                                             onClick={() => handleOpenReview(item.id, true)}
                                             className="py-2.5 px-4 bg-white hover:bg-pink-50 text-pink-600 border border-pink-200 text-xs font-bold rounded-2xl transition shadow-sm flex items-center gap-1.5 cursor-pointer"
                                             title="Xem video chữa đề thi này ở cuối bài"
@@ -192,6 +194,7 @@ export default function ScoreHistory() {
                                         </button>
                                     )}
                                     <button 
+                                        type="button"
                                         onClick={() => handleOpenReview(item.id, false)}
                                         className="py-2.5 px-4 bg-pink-50 hover:bg-pink-100 text-pink-700 border border-pink-200 text-xs font-bold rounded-2xl transition shadow-sm flex items-center gap-1 cursor-pointer"
                                     >
@@ -245,6 +248,7 @@ export default function ScoreHistory() {
                             <div className="flex items-center gap-1.5 overflow-x-auto max-w-full md:max-w-md py-1">
                                 {reviewData.questions.map((q, idx) => (
                                     <button
+                                        type="button"
                                         key={q.id}
                                         onClick={() => {
                                             setIsViewingVideo(false);
@@ -265,6 +269,7 @@ export default function ScoreHistory() {
 
                                 {(reviewData.videos?.length > 0 || reviewData.videoExplanationUrl) && (
                                     <button
+                                        type="button"
                                         onClick={() => setIsViewingVideo(true)}
                                         className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer flex-shrink-0 whitespace-nowrap ${
                                             isViewingVideo
@@ -284,6 +289,7 @@ export default function ScoreHistory() {
                             </div>
 
                             <button 
+                                type="button"
                                 onClick={() => setReviewData(null)}
                                 className="w-8 h-8 rounded-full bg-white border border-pink-200 text-slate-500 font-bold flex items-center justify-center hover:bg-pink-100 transition cursor-pointer self-end md:self-auto"
                             >
@@ -327,6 +333,7 @@ export default function ScoreHistory() {
 
                                     <div className="flex justify-between items-center pt-4 border-t border-pink-100">
                                         <button
+                                            type="button"
                                             onClick={() => {
                                                 setIsViewingVideo(false);
                                                 setCurrentReviewIndex(reviewData.questions.length - 1);
@@ -336,6 +343,7 @@ export default function ScoreHistory() {
                                             ‹ Quay lại câu {reviewData.questions.length}
                                         </button>
                                         <button
+                                            type="button"
                                             onClick={() => setReviewData(null)}
                                             className="px-6 py-2.5 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold shadow-md shadow-pink-600/20 transition cursor-pointer"
                                         >
@@ -407,9 +415,9 @@ export default function ScoreHistory() {
                                                         {(currentQ.acceptedAnswers || currentQ.correctAnswer || '')
                                                             .split(/[|;]/)
                                                             .map(value => value.trim())
-                                                            .filter(Boolean)
-                                                            .map((value, idx) => (
-                                                                <span key={`${value}-${idx}`} className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-sm font-bold text-emerald-700">
+                                                            .filter((value, pos, arr) => Boolean(value) && arr.indexOf(value) === pos)
+                                                            .map(value => (
+                                                                <span key={value} className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-sm font-bold text-emerald-700">
                                                                     {value}
                                                                 </span>
                                                             ))}
@@ -467,6 +475,7 @@ export default function ScoreHistory() {
                                     {/* Footer điều hướng trong Modal */}
                                     <div className="flex justify-between items-center mt-8 pt-4 border-t border-pink-100">
                                         <button
+                                            type="button"
                                             disabled={currentReviewIndex === 0}
                                             onClick={() => setCurrentReviewIndex(prev => prev - 1)}
                                             className={`px-5 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer ${currentReviewIndex === 0 ? 'opacity-40 cursor-not-allowed border-slate-200' : 'border-slate-200 hover:bg-pink-50'}`}
@@ -476,6 +485,7 @@ export default function ScoreHistory() {
 
                                         {currentReviewIndex < reviewData.questions.length - 1 ? (
                                             <button
+                                                type="button"
                                                 onClick={() => setCurrentReviewIndex(prev => prev + 1)}
                                                 className="px-5 py-2 rounded-2xl text-xs font-bold border transition cursor-pointer bg-pink-600 text-white border-pink-600 hover:bg-pink-700"
                                             >
@@ -483,6 +493,7 @@ export default function ScoreHistory() {
                                             </button>
                                         ) : (reviewData.videos?.length > 0 || reviewData.videoExplanationUrl) ? (
                                             <button
+                                                type="button"
                                                 onClick={() => setIsViewingVideo(true)}
                                                 className="px-5 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer bg-gradient-to-r from-pink-600 to-rose-500 text-white shadow-md shadow-pink-500/20 hover:opacity-95 flex items-center gap-1.5"
                                             >
@@ -491,6 +502,7 @@ export default function ScoreHistory() {
                                             </button>
                                         ) : (
                                             <button
+                                                type="button"
                                                 disabled
                                                 className="px-5 py-2 rounded-2xl text-xs font-bold border transition border-slate-200 opacity-40 cursor-not-allowed"
                                             >

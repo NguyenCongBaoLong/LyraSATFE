@@ -163,6 +163,7 @@ export default function NotificationBell({ className = '', align = 'right' }) {
         <div className={`relative flex items-center gap-2 ${className}`} ref={dropdownRef}>
             {isStudent && (
                 <div
+                    role="status"
                     className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-pink-50 border border-pink-100 text-pink-700 shadow-sm"
                     aria-label={`Tổng số quả đã nhận: ${fruitCount}`}
                     title="Tổng số quả nhận được từ các bài đã làm"
@@ -205,6 +206,7 @@ export default function NotificationBell({ className = '', align = 'right' }) {
                         </div>
                         {unreadCount > 0 && (
                             <button
+                                type="button"
                                 onClick={handleMarkAllAsRead}
                                 className="text-[11px] font-bold text-pink-600 hover:text-pink-800 flex items-center gap-1 cursor-pointer transition"
                             >
@@ -242,9 +244,18 @@ export default function NotificationBell({ className = '', align = 'right' }) {
                             </div>
                         ) : (
                             notifications.map((n) => (
+                                // biome-ignore lint/a11y/useSemanticElements: card wraps block notification layout
                                 <div
                                     key={n.id}
+                                    role="button"
+                                    tabIndex={0}
                                     onClick={() => handleNotificationClick(n)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleNotificationClick(n);
+                                        }
+                                    }}
                                     className={`p-3.5 hover:bg-pink-50/60 transition cursor-pointer flex items-start gap-3 ${
                                         !n.isRead ? 'bg-pink-50/30' : ''
                                     }`}

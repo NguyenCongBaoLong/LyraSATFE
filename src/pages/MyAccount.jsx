@@ -110,7 +110,7 @@ export default function MyAccount() {
                         <p className="text-xs text-slate-400 mt-0.5">Quản lý thông tin cá nhân và cấu hình tài khoản</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button onClick={() => navigate('/home')} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
+                        <button type="button" onClick={() => navigate('/home')} className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 font-bold px-4 py-2.5 rounded-2xl border border-pink-200 transition cursor-pointer">
                             ← Về trang chủ
                         </button>
                         <NotificationBell />
@@ -131,7 +131,7 @@ export default function MyAccount() {
                                 )}
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1">Ảnh đại diện</label>
+                                <p className="block text-xs font-bold text-slate-700 mb-1">Ảnh đại diện</p>
                                 <label className="inline-block bg-pink-500 hover:bg-pink-600 text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer transition shadow-sm shadow-pink-500/20">
                                     Cập nhật
                                     <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
@@ -140,23 +140,23 @@ export default function MyAccount() {
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">Họ và tên</label>
-                            <input type="text" disabled className="w-full px-4 py-3 bg-slate-100 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-500 cursor-not-allowed" value={user.fullName || ''} />
+                            <label htmlFor="account-fullname" className="block text-[11px] font-bold uppercase text-slate-400 mb-1">Họ và tên</label>
+                            <input id="account-fullname" type="text" disabled className="w-full px-4 py-3 bg-slate-100 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-500 cursor-not-allowed" value={user.fullName || ''} />
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">Email</label>
-                            <input type="email" disabled className="w-full px-4 py-3 bg-slate-100 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-500 cursor-not-allowed" value={user.email || ''} />
+                            <label htmlFor="account-email" className="block text-[11px] font-bold uppercase text-slate-400 mb-1">Email</label>
+                            <input id="account-email" type="email" disabled className="w-full px-4 py-3 bg-slate-100 rounded-2xl border border-slate-200 text-sm font-semibold text-slate-500 cursor-not-allowed" value={user.email || ''} />
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">Biệt danh (Nickname)</label>
-                            <input type="text" placeholder="Nhập biệt danh của bạn..." className="w-full px-4 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500 transition" value={user.nickname || ''} onChange={(e) => setUser({ ...user, nickname: e.target.value })} />
+                            <label htmlFor="account-nickname" className="block text-[11px] font-bold uppercase text-slate-400 mb-1">Biệt danh (Nickname)</label>
+                            <input id="account-nickname" type="text" placeholder="Nhập biệt danh của bạn..." className="w-full px-4 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500 transition" value={user.nickname || ''} onChange={(e) => setUser({ ...user, nickname: e.target.value })} />
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">Trường học</label>
-                            <input type="text" placeholder="Tên trường THPT / Đại học" className="w-full px-4 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500 transition" value={user.school || ''} onChange={(e) => setUser({ ...user, school: e.target.value })} />
+                            <label htmlFor="account-school" className="block text-[11px] font-bold uppercase text-slate-400 mb-1">Trường học</label>
+                            <input id="account-school" type="text" placeholder="Tên trường THPT / Đại học" className="w-full px-4 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500 transition" value={user.school || ''} onChange={(e) => setUser({ ...user, school: e.target.value })} />
                         </div>
 
                         <div>
@@ -226,7 +226,7 @@ export default function MyAccount() {
                         </div>
                         <h3 className="text-xl font-bold text-slate-800 mb-2">{modalConfig.title}</h3>
                         <p className="text-sm text-slate-500 mb-6 leading-relaxed">{modalConfig.message}</p>
-                        <button onClick={closeModal} className="w-full py-3 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-md shadow-pink-600/20 transition cursor-pointer">
+                        <button type="button" onClick={closeModal} className="w-full py-3 rounded-2xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-md shadow-pink-600/20 transition cursor-pointer">
                             Đồng ý
                         </button>
                     </div>

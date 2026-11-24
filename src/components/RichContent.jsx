@@ -203,7 +203,7 @@ function upgradeMathNodesInDocument(documentFragment) {
 }
 
 function sanitizeDomTree(documentFragment) {
-    documentFragment.querySelectorAll('script,style,iframe,object,embed,form').forEach(node => node.remove());
+    documentFragment.querySelectorAll('script,style,iframe,object,embed,form').forEach(node => { node.remove(); });
 
     documentFragment.body.querySelectorAll('*').forEach(node => {
         if (!ALLOWED_TAGS.has(node.tagName)) {
@@ -325,6 +325,7 @@ function RichContent({ content, className = '' }) {
     return (
         <div
             className={`rich-content ${className}`}
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: HTML sanitized by sanitizeDomTree + KaTeX
             dangerouslySetInnerHTML={{ __html: html }}
         />
     );

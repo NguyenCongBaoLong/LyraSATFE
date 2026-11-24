@@ -103,6 +103,7 @@ export default function AdminDashboard() {
         return () => controller.abort();
     }, [activeTab, hasLoadedClassOptions, hasLoadedTeacherOptions, loadClassOptions, loadTeacherOptions]);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional refresh trigger
     useEffect(() => {
         if (activeTab !== 'users') return;
         const controller = new AbortController();
@@ -123,6 +124,7 @@ export default function AdminDashboard() {
         };
     }, [activeTab, teacherPage, teacherRefresh]);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional refresh trigger
     useEffect(() => {
         if (activeTab !== 'classes') return;
         const controller = new AbortController();
@@ -144,6 +146,7 @@ export default function AdminDashboard() {
     }, [activeTab, classPage, classRefresh]);
 
     // Tải danh sách học sinh khi mở Tab Quản lý Học viên
+    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional refresh trigger
     useEffect(() => {
         if (activeTab !== 'students') return;
         const controller = new AbortController();
@@ -503,6 +506,7 @@ export default function AdminDashboard() {
                 {/* Tabs Chức Năng */}
                 <div className="flex flex-wrap gap-3 mb-8">
                     <button 
+                        type="button"
                         onClick={() => setActiveTab('users')}
                         className={`px-5 py-3 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-2 ${activeTab === 'users' ? 'bg-pink-500 text-white shadow-md shadow-pink-500/20' : 'bg-white border border-pink-100 text-slate-600 hover:bg-pink-50'}`}
                     >
@@ -510,6 +514,7 @@ export default function AdminDashboard() {
                         <span>Tạo Tài Khoản</span>
                     </button>
                     <button 
+                        type="button"
                         onClick={() => setActiveTab('students')}
                         className={`px-5 py-3 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-2 ${activeTab === 'students' ? 'bg-pink-500 text-white shadow-md shadow-pink-500/20' : 'bg-white border border-pink-100 text-slate-600 hover:bg-pink-50'}`}
                     >
@@ -517,6 +522,7 @@ export default function AdminDashboard() {
                         <span>Quản lý Học viên & Đăng nhập</span>
                     </button>
                     <button 
+                        type="button"
                         onClick={() => setActiveTab('classes')}
                         className={`px-5 py-3 rounded-2xl text-xs font-bold transition cursor-pointer flex items-center gap-2 ${activeTab === 'classes' ? 'bg-pink-500 text-white shadow-md shadow-pink-500/20' : 'bg-white border border-pink-100 text-slate-600 hover:bg-pink-50'}`}
                     >

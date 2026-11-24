@@ -106,12 +106,14 @@ export default function Home() {
                     </div>
 
                     <button 
+                        type="button"
                         onClick={() => setCurrentBannerIndex((prev) => (prev - 1 + banners.length) % banners.length)}
                         className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-pink-600 w-8 h-8 rounded-full flex items-center justify-center font-bold shadow transition cursor-pointer"
                     >
                         ‹
                     </button>
                     <button 
+                        type="button"
                         onClick={() => setCurrentBannerIndex((prev) => (prev + 1) % banners.length)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-pink-600 w-8 h-8 rounded-full flex items-center justify-center font-bold shadow transition cursor-pointer"
                     >
@@ -119,9 +121,10 @@ export default function Home() {
                     </button>
 
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {banners.map((_, idx) => (
+                        {banners.map((banner, idx) => (
                             <button 
-                                key={idx} 
+                                key={banner.id} 
+                                type="button"
                                 onClick={() => setCurrentBannerIndex(idx)}
                                 className={`h-2 rounded-full transition cursor-pointer ${currentBannerIndex === idx ? 'bg-pink-600 w-5' : 'bg-pink-200 w-2'}`}
                             />
@@ -169,14 +172,15 @@ export default function Home() {
 
                 {/* Hàng phụ: Vocab */}
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div 
-                        onClick={() => navigate('/vocab')} 
-                        className="bg-white p-6 rounded-3xl border border-pink-100 hover:border-pink-300 cursor-pointer transition text-center flex flex-col justify-center items-center h-36 shadow-sm group"
+                    <button
+                        type="button"
+                        onClick={() => navigate('/vocab')}
+                        className="w-full bg-white p-6 rounded-3xl border border-pink-100 hover:border-pink-300 cursor-pointer transition text-center flex flex-col justify-center items-center h-36 shadow-sm group"
                     >
                         <div className="text-3xl mb-1 group-hover:scale-110 transition">📚</div>
                         <h3 className="font-bold text-slate-700 text-sm mt-1">Vocab.</h3>
                         <p className="text-[11px] text-slate-400 mt-0.5">Học từ vựng Series</p>
-                    </div>
+                    </button>
                 </div>
             </div>
         </div>
