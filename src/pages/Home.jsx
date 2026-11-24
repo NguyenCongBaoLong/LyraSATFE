@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import StudentSidebar from '../components/StudentSidebar';
 import StudentClassSwitcher from '../components/StudentClassSwitcher';
 import NotificationBell from '../components/NotificationBell';
+import { safeGetUser } from '../utils/safeStorage';
 
 // Import các ảnh banner và mascot từ thư mục assets của bạn
 import banner1 from '../assets/banner1-optimized.jpg';
@@ -25,8 +26,8 @@ export default function Home() {
     ];
 
     useEffect(() => {
-        const storedUser = JSON.parse(localStorage.getItem('user'));
-        if (!storedUser) {
+        const storedUser = safeGetUser();
+        if (!storedUser || !storedUser.id) {
             navigate('/');
             return;
         }

@@ -3,10 +3,74 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import TextHighlighter from '../components/TextHighlighter';
 import RichContent from '../components/RichContent';
+import { safeGetUser, safeParseSession } from '../utils/safeStorage';
 import scoreImage0To25 from '../assets/0-25.png';
 import scoreImage25To50 from '../assets/25-50.png';
 import scoreImage50To75 from '../assets/50-75.png';
 import scoreImage75To100 from '../assets/75-100.png';
+
+const formatTime = (seconds) => {
+    const safe = Math.max(0, Number(seconds) || 0);
+    const h = Math.floor(safe / 3600);
+    const m = Math.floor((safe % 3600) / 60);
+    const s = safe % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
+// Cô lập state đồng hồ đếm ngược trong component con để tránh re-render toàn bộ bài thi và KaTeX mỗi giây.
+const ExamCountdownBadge = React.memo(function ExamCountdownBadge({
+    initialSeconds,
+    paused,
+    stopped,
+    timeLeftKey,
+    timeLeftRef,
+    onExpire
+}) {
+    const [seconds, setSeconds] = useState(initialSeconds);
+    const prevSecondsRef = useRef(initialSeconds);
+
+    useEffect(() => {
+        if (initialSeconds === null || initialSeconds === undefined) return;
+        prevSecondsRef.current = initialSeconds;
+        timeLeftRef.current = initialSeconds;
+        setSeconds(initialSeconds);
+    }, [initialSeconds, timeLeftRef]);
+
+    useEffect(() => {
+        if (initialSeconds === null || initialSeconds === undefined || paused || stopped) return;
+
+        const timer = setInterval(() => {
+            setSeconds((prev) => {
+                if (prev === null || prev <= 0) return prev;
+                const next = prev - 1;
+                timeLeftRef.current = next;
+                try {
+                    sessionStorage.setItem(timeLeftKey, next.toString());
+                } catch {
+                    // Ignore storage error
+                }
+                return next;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [initialSeconds, paused, stopped, timeLeftKey, timeLeftRef]);
+
+    useEffect(() => {
+        const prev = prevSecondsRef.current;
+        prevSecondsRef.current = seconds;
+        if (!stopped && prev !== null && prev > 0 && seconds === 0) {
+            onExpire?.();
+        }
+    }, [seconds, stopped, onExpire]);
+
+    return (
+        <div className="bg-pink-50 border border-pink-200 px-4 py-1.5 rounded-xl text-xs font-mono font-bold text-pink-700 flex items-center gap-2 shadow-sm">
+            <span>⏱</span>
+            <span>{formatTime(seconds ?? 0)}</span>
+        </div>
+    );
+});
 
 export default function DoTest() {
     const { id } = useParams();
@@ -24,26 +88,27 @@ export default function DoTest() {
     // State quản lý việc ẩn/hiện bảng danh sách câu hỏi (Question Palette Modal hoặc Drawer)
     const [showPalette, setShowPalette] = useState(false);
 
-    const storedUser = JSON.parse(localStorage.getItem('user')) || {};
-    const studentId = storedUser.id ?? null; // Bắt buộc đăng nhập, không fallback về id 1
+    const storedUser = safeGetUser();
+    const studentId = storedUser?.id ?? null; // Bắt buộc đăng nhập, không fallback về id 1
 
-    // 1. Khôi phục đáp án từ sessionStorage chống mất khi F5 hoặc thoát giữa chừng
-    const [selectedAnswers, setSelectedAnswers] = useState(() => {
-        const saved = sessionStorage.getItem(`test_${id}_answers`);
-        return saved ? JSON.parse(saved) : {};
-    });
-    
-    const [markedQuestions, setMarkedQuestions] = useState(() => {
-        const saved = sessionStorage.getItem(`test_${id}_marks`);
-        return saved ? JSON.parse(saved) : {};
-    });
+    const storagePrefix = studentId ? `test_${studentId}_${id}` : `test_${id}`;
+    const answersKey = `${storagePrefix}_answers`;
+    const marksKey = `${storagePrefix}_marks`;
+    const timeLeftKey = `${storagePrefix}_time_left`;
+    const startTimeKey = `${storagePrefix}_start_time`;
 
-    // 2. Lưu trực tiếp số giây còn lại để rời bài không làm thời gian tiếp tục trôi.
-    const timeLeftKey = `test_${id}_time_left`;
-    const [timeLeft, setTimeLeft] = useState(() => {
-        const saved = sessionStorage.getItem(timeLeftKey);
-        return saved === null ? 0 : Math.max(0, parseInt(saved, 10) || 0);
-    });
+    // 1. Khôi phục đáp án từ sessionStorage theo từng tài khoản để tránh dùng chung máy bị lẫn bài
+    const [selectedAnswers, setSelectedAnswers] = useState(() =>
+        safeParseSession(answersKey, {})
+    );
+
+    const [markedQuestions, setMarkedQuestions] = useState(() =>
+        safeParseSession(marksKey, {})
+    );
+
+    // 2. Lưu trực tiếp số giây còn lại bằng ref + component đồng hồ riêng để rời bài không mất, không re-render đề mỗi giây.
+    const [initialTimeLeft, setInitialTimeLeft] = useState(null);
+    const timeLeftRef = useRef(0);
     const [isExitPaused, setIsExitPaused] = useState(false);
 
     const [quizResult, setQuizResult] = useState(null);
@@ -78,7 +143,8 @@ export default function DoTest() {
             return;
         }
 
-        api.get(`/tests/${id}/check-attempts/${studentId}`)
+        const controller = new AbortController();
+        api.get(`/tests/${id}/check-attempts/${studentId}`, { signal: controller.signal })
             .then(res => {
                 if (!res.data.allowed) {
                     setAllowed(false);
@@ -87,24 +153,36 @@ export default function DoTest() {
                 setCheckingAttempt(false);
             })
             .catch(err => {
+                if (err.code === 'ERR_CANCELED') return;
                 console.error("Lỗi kiểm tra lượt làm bài:", err);
                 setCheckingAttempt(false);
             });
+
+        return () => controller.abort();
     }, [id, navigate, studentId]);
 
     // Tự động lưu đáp án khi học sinh thao tác chọn
     useEffect(() => {
-        sessionStorage.setItem(`test_${id}_answers`, JSON.stringify(selectedAnswers));
-    }, [selectedAnswers, id]);
+        try {
+            sessionStorage.setItem(answersKey, JSON.stringify(selectedAnswers));
+        } catch {
+            // Ignore quota errors
+        }
+    }, [selectedAnswers, answersKey]);
 
     useEffect(() => {
-        sessionStorage.setItem(`test_${id}_marks`, JSON.stringify(markedQuestions));
-    }, [markedQuestions, id]);
+        try {
+            sessionStorage.setItem(marksKey, JSON.stringify(markedQuestions));
+        } catch {
+            // Ignore quota errors
+        }
+    }, [markedQuestions, marksKey]);
 
     useEffect(() => {
-        if (!allowed || !studentId) return;
+        if (checkingAttempt || !allowed || !studentId) return;
 
-        api.get(`/tests/${id}`)
+        const controller = new AbortController();
+        api.get(`/tests/${id}`, { signal: controller.signal })
             .then(res => {
                 const totalDurationSec = (res.data.duration || 60) * 60;
                 setTestData({
@@ -115,15 +193,16 @@ export default function DoTest() {
                 });
 
                 const savedRemaining = sessionStorage.getItem(timeLeftKey);
-                const savedStart = sessionStorage.getItem(`test_${id}_start_time`);
+                const savedStart = sessionStorage.getItem(startTimeKey);
                 const remaining = savedRemaining !== null
                     ? Math.min(totalDurationSec, Math.max(0, parseInt(savedRemaining, 10) || 0))
                     : savedStart
                         ? Math.max(0, totalDurationSec - Math.floor((Date.now() - parseInt(savedStart, 10)) / 1000))
                         : totalDurationSec;
-                setTimeLeft(remaining);
+                timeLeftRef.current = remaining;
+                setInitialTimeLeft(remaining);
                 sessionStorage.setItem(timeLeftKey, remaining.toString());
-                sessionStorage.removeItem(`test_${id}_start_time`);
+                sessionStorage.removeItem(startTimeKey);
 
                 if (res.data.questions && res.data.questions.length > 0) {
                     const formattedQuestions = res.data.questions.map(q => {
@@ -162,24 +241,12 @@ export default function DoTest() {
                 }
             })
             .catch(err => {
+                if (err.code === 'ERR_CANCELED') return;
                 console.error("Lỗi tải bài test:", err);
             });
-    }, [id, allowed, studentId, timeLeftKey]);
 
-    // Đồng hồ đếm ngược
-    useEffect(() => {
-        if (!allowed || !testData || timeLeft <= 0 || isExitPaused) return;
-
-        const timer = setInterval(() => {
-            setTimeLeft(prev => {
-                const next = Math.max(0, prev - 1);
-                sessionStorage.setItem(timeLeftKey, next.toString());
-                return next;
-            });
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [allowed, testData, timeLeft, isExitPaused, timeLeftKey]);
+        return () => controller.abort();
+    }, [id, checkingAttempt, allowed, studentId, timeLeftKey, startTimeKey]);
 
     const handleConfirmSubmit = useCallback(async () => {
         if (isSubmittingRef.current) return;
@@ -192,7 +259,7 @@ export default function DoTest() {
         closeModal();
         try {
             const totalDurationSec = (testData?.duration || 60) * 60;
-            const timeSpentSec = Math.max(0, totalDurationSec - timeLeft);
+            const timeSpentSec = Math.max(0, totalDurationSec - timeLeftRef.current);
             const submissionData = {
                 studentId: studentId,
                 testId: parseInt(id),
@@ -201,13 +268,14 @@ export default function DoTest() {
             };
 
             const response = await api.post('/submissions', submissionData);
-            
-            sessionStorage.removeItem(`test_${id}_answers`);
-            sessionStorage.removeItem(`test_${id}_marks`);
+
+            sessionStorage.removeItem(answersKey);
+            sessionStorage.removeItem(marksKey);
             sessionStorage.removeItem(timeLeftKey);
-            sessionStorage.removeItem(`test_${id}_start_time`);
+            sessionStorage.removeItem(startTimeKey);
 
             setQuizResult(response.data);
+            window.dispatchEvent(new Event('lyra:submission-completed'));
         } catch (error) {
             console.error("Lỗi khi nộp bài:", error);
 
@@ -239,27 +307,19 @@ export default function DoTest() {
             isSubmittingRef.current = false;
             setIsSubmitting(false);
         }
-    }, [closeModal, id, navigate, selectedAnswers, showAlert, studentId, testData, timeLeft, timeLeftKey]);
+    }, [answersKey, closeModal, id, marksKey, navigate, selectedAnswers, showAlert, startTimeKey, studentId, testData, timeLeftKey]);
 
     useEffect(() => {
         submitHandlerRef.current = handleConfirmSubmit;
     }, [handleConfirmSubmit]);
 
-    useEffect(() => {
-        if (!allowed || !testData || timeLeft > 0 || quizResult) return;
-        submitHandlerRef.current();
-    }, [allowed, testData, timeLeft, quizResult]);
-
-    const formatTime = (seconds) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
-        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    };
+    const handleTimerExpire = useCallback(() => {
+        submitHandlerRef.current?.();
+    }, []);
 
     const handleExitTest = () => {
         setIsExitPaused(true);
-        sessionStorage.setItem(timeLeftKey, timeLeft.toString());
+        sessionStorage.setItem(timeLeftKey, timeLeftRef.current.toString());
         showConfirm(
             "Thoát bài thi?",
             "Tiến trình làm bài của bạn đang được lưu tạm. Bạn có chắc chắn muốn thoát về danh sách bài tập không?",
@@ -366,7 +426,7 @@ export default function DoTest() {
                             <h2 className="text-xl font-black text-pink-900 mt-1">{testData.title}</h2>
                         </div>
                         <div className="w-40 h-40 mx-auto md:mx-0 bg-pink-50 rounded-3xl border border-pink-200 flex items-center justify-center shadow-inner overflow-hidden">
-                            <img src={scoreImage} alt={`Kết quả ${score}%`} className="w-full h-full object-contain" />
+                            <img src={scoreImage} alt={`Kết quả ${score}%`} loading="lazy" className="w-full h-full object-contain" />
                         </div>
                     </div>
                     <div className="flex flex-col items-center md:items-end flex-1 space-y-6 text-center md:text-right">
@@ -435,10 +495,14 @@ export default function DoTest() {
                     >
                         <span>📋 Danh sách câu ({Object.keys(selectedAnswers).length}/{questions.length})</span>
                     </button>
-                    <div className="bg-pink-50 border border-pink-200 px-4 py-1.5 rounded-xl text-xs font-mono font-bold text-pink-700 flex items-center gap-2 shadow-sm">
-                        <span>⏱</span>
-                        <span>{formatTime(timeLeft)}</span>
-                    </div>
+                    <ExamCountdownBadge
+                        initialSeconds={initialTimeLeft}
+                        paused={isExitPaused}
+                        stopped={Boolean(quizResult)}
+                        timeLeftKey={timeLeftKey}
+                        timeLeftRef={timeLeftRef}
+                        onExpire={handleTimerExpire}
+                    />
                 </div>
             </div>
 
@@ -518,7 +582,7 @@ export default function DoTest() {
                 <TextHighlighter questionId={currentQ?.id} className={`flex-1 grid grid-cols-1 ${hasPassage ? 'md:grid-cols-2' : ''} gap-4 md:gap-5 h-full overflow-hidden`}>
                     {/* Cột Trái: Đọc đoạn văn (Passage) - chỉ hiện khi câu có đoạn văn */}
                     {hasPassage && (
-                    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
+                    <div className="min-w-0 bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
                         <div className="w-full text-left">
                             <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
                             <RichContent
@@ -530,7 +594,7 @@ export default function DoTest() {
                     )}
 
                     {/* Cột Phải: Câu hỏi và các lựa chọn đáp án theo chuẩn Ảnh 2 */}
-                    <div className={`bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 md:p-8 overflow-y-auto flex flex-col justify-between ${hasPassage ? '' : 'w-full max-w-4xl mx-auto'}`}>
+                    <div className={`min-w-0 bg-white rounded-2xl border border-slate-200/90 shadow-xs p-6 md:p-8 overflow-y-auto flex flex-col justify-between ${hasPassage ? '' : 'w-full max-w-4xl mx-auto'}`}>
                         <div className="w-full text-left">
                             {/* Header câu hỏi: Badge số câu + Đánh dấu xem lại */}
                             <div className="flex justify-between items-center pb-4 mb-4 border-b border-slate-100">
@@ -614,7 +678,7 @@ export default function DoTest() {
                                             </div>
                                             <RichContent
                                                 content={opt.text}
-                                                className="option-rich text-sm font-medium text-slate-800 select-text cursor-text"
+                                                className="option-rich flex-1 min-w-0 overflow-x-auto text-sm font-medium text-slate-800 select-text cursor-text"
                                             />
                                         </div>
                                     )

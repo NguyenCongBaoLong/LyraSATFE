@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check } from 'lucide-react';
 import api from '../api';
+import { safeGetUser } from '../utils/safeStorage';
 import {
     formatRelativeTime,
     iconForNotificationType as iconForType,
@@ -20,20 +21,27 @@ export default function NotificationBell({ className = '', align = 'right' }) {
     const [loadError, setLoadError] = useState('');
     const [countError, setCountError] = useState(false);
     const dropdownRef = useRef(null);
+    const unreadControllerRef = useRef(null);
     const navigate = useNavigate();
 
-    const user = JSON.parse(localStorage.getItem('user')) || {};
+    const user = safeGetUser();
     const userId = user.id;
     const isStudent = user.role === 'Student';
 
-    // 1. Tải số lượng chưa đọc định kỳ
+    // 1. Tải số lượng chưa đọc định kỳ (tạm dừng khi tab ẩn)
     const fetchUnreadCount = useCallback(async () => {
-        if (!userId) return;
+        if (!userId || document.hidden) return;
+        unreadControllerRef.current?.abort();
+        const controller = new AbortController();
+        unreadControllerRef.current = controller;
         try {
-            const res = await api.get(`/notifications/unread-count?userId=${userId}`);
+            const res = await api.get(`/notifications/unread-count?userId=${userId}`, {
+                signal: controller.signal
+            });
             setUnreadCount(res.data?.unreadCount || 0);
             setCountError(false);
         } catch (err) {
+            if (err.code === 'ERR_CANCELED') return;
             // Không nuốt lỗi im lặng: đánh dấu để chuông hiện trạng thái lỗi
             console.error('Lỗi tải số thông báo chưa đọc:', err);
             setCountError(true);
@@ -44,43 +52,44 @@ export default function NotificationBell({ className = '', align = 'right' }) {
         if (!userId || !isStudent) return;
 
         let isMounted = true;
+        let controller = new AbortController();
         const fetchFruitCount = async () => {
+            controller.abort();
+            controller = new AbortController();
             try {
-                const res = await api.get(`/submissions/fruit-count/${userId}`);
+                const res = await api.get(`/submissions/fruit-count/${userId}`, {
+                    signal: controller.signal
+                });
                 if (isMounted) setFruitCount(res.data?.fruitCount ?? 0);
             } catch (err) {
+                if (err.code === 'ERR_CANCELED') return;
                 console.error('Lỗi tải tổng số quả đã nhận:', err);
             }
         };
 
         fetchFruitCount();
-        const interval = setInterval(fetchFruitCount, 15000);
+        window.addEventListener('lyra:submission-completed', fetchFruitCount);
         return () => {
             isMounted = false;
-            clearInterval(interval);
+            controller.abort();
+            window.removeEventListener('lyra:submission-completed', fetchFruitCount);
         };
     }, [isStudent, userId]);
 
     useEffect(() => {
-        let isMounted = true;
         if (!userId) return;
 
-        api.get(`/notifications/unread-count?userId=${userId}`)
-            .then(res => {
-                if (isMounted) {
-                    setUnreadCount(res.data?.unreadCount || 0);
-                    setCountError(false);
-                }
-            })
-            .catch((err) => {
-                console.error('Lỗi tải số thông báo chưa đọc:', err);
-                if (isMounted) setCountError(true);
-            });
+        fetchUnreadCount();
+        const interval = setInterval(fetchUnreadCount, 15000);
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') fetchUnreadCount();
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
 
-        const interval = setInterval(fetchUnreadCount, 15000); // 15s fast polling
         return () => {
-            isMounted = false;
             clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+            unreadControllerRef.current?.abort();
         };
     }, [userId, fetchUnreadCount]);
 

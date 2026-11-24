@@ -8,23 +8,6 @@ import Pagination from '../components/Pagination';
 const LIST_PAGE_SIZE = 8;
 const VOCAB_PAGE_SIZE = 10;
 
-const MOCK_VOCAB_DATA = {
-    SAT01: {
-        'Series 01': [
-            { id: 1, word: 'Ponder', phonetic: "'pɒndə", definition: 'trầm tư, suy ngẫm', synonyms: ['speculate'], example: 'He continued to ponder the problem.' },
-            { id: 2, word: 'Meticulous', phonetic: "mɪ'tɪkjʊləs", definition: 'tỉ mỉ, cẩn trọng', synonyms: ['thorough'], example: 'She is meticulous in her work.' }
-        ],
-        'Series 02': [
-            { id: 3, word: 'Ambiguous', phonetic: "æm'bɪɡjuəs", definition: 'mơ hồ, đa nghĩa', synonyms: ['unclear'], example: 'The reply was ambiguous.' }
-        ]
-    },
-    SAT02: {
-        'Series 01': [
-            { id: 4, word: 'Pragmatic', phonetic: "præɡ'mætɪk", definition: 'thực tế, thực dụng', synonyms: ['practical'], example: 'We need a pragmatic approach.' }
-        ]
-    }
-};
-
 export default function VocabList() {
     const [classList, setClassList] = useState([]);
     const [classPage, setClassPage] = useState(1);
@@ -41,11 +24,14 @@ export default function VocabList() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
     const [isLoadingVocab, setIsLoadingVocab] = useState(false);
+    const [loadError, setLoadError] = useState('');
+    const [retryTick, setRetryTick] = useState(0);
 
     const navigate = useNavigate();
 
     // Tải từng trang danh sách lớp học.
     useEffect(() => {
+        setLoadError('');
         const controller = new AbortController();
         api.get('/vocabularies/classes', {
             params: { page: classPage, pageSize: LIST_PAGE_SIZE },
@@ -59,18 +45,19 @@ export default function VocabList() {
             .catch(err => {
                 if (err.code === 'ERR_CANCELED') return;
                 console.error('Lỗi tải danh sách lớp từ vựng:', err);
-                const classes = ['SAT01', 'SAT02'];
-                setClassList(classes.slice((classPage - 1) * LIST_PAGE_SIZE, classPage * LIST_PAGE_SIZE));
-                setClassCount(classes.length);
+                setClassList([]);
+                setClassCount(0);
+                setLoadError('Không tải được danh sách lớp từ vựng. Vui lòng thử lại.');
             });
         return () => {
             controller.abort();
         };
-    }, [classPage]);
+    }, [classPage, retryTick]);
 
     // Tải danh sách series cho lớp và trang hiện tại.
     useEffect(() => {
         if (!selectedClass) return;
+        setLoadError('');
         const controller = new AbortController();
         api.get(`/vocabularies/class/${encodeURIComponent(selectedClass)}/series`, {
             params: { page: seriesPage, pageSize: LIST_PAGE_SIZE },
@@ -84,18 +71,18 @@ export default function VocabList() {
             .catch(err => {
                 if (err.code === 'ERR_CANCELED') return;
                 console.error('Lỗi tải danh sách series từ vựng:', err);
-                const classData = MOCK_VOCAB_DATA[selectedClass] || MOCK_VOCAB_DATA.SAT01;
-                const allSeries = Object.keys(classData);
-                setSeriesList(allSeries.slice((seriesPage - 1) * LIST_PAGE_SIZE, seriesPage * LIST_PAGE_SIZE));
-                setSeriesCount(allSeries.length);
+                setSeriesList([]);
+                setSeriesCount(0);
+                setLoadError('Không tải được danh sách bộ từ vựng. Vui lòng thử lại.');
             });
         return () => {
             controller.abort();
         };
-    }, [selectedClass, seriesPage]);
+    }, [selectedClass, seriesPage, retryTick]);
 
     // 1. Khi chọn lớp, quay về trang đầu của các series.
     const handleSelectClass = (classCode) => {
+        setLoadError('');
         setSelectedClass(classCode);
         setSelectedSeries(null);
         setStudyMode(false);
@@ -105,6 +92,7 @@ export default function VocabList() {
     // Tải bộ thẻ theo trang để không lấy toàn bộ từ vựng cùng lúc.
     useEffect(() => {
         if (!selectedClass || !selectedSeries || !studyMode) return;
+        setLoadError('');
         const controller = new AbortController();
         setIsLoadingVocab(true);
         api.get(
@@ -122,10 +110,9 @@ export default function VocabList() {
             .catch(err => {
                 if (err.code === 'ERR_CANCELED') return;
                 console.error('Lỗi tải từ vựng:', err);
-                const classData = MOCK_VOCAB_DATA[selectedClass] || MOCK_VOCAB_DATA.SAT01;
-                const allWords = classData[selectedSeries] || [];
-                setVocabList(allWords.slice((vocabPage - 1) * VOCAB_PAGE_SIZE, vocabPage * VOCAB_PAGE_SIZE));
-                setVocabCount(allWords.length);
+                setVocabList([]);
+                setVocabCount(0);
+                setLoadError('Không tải được danh sách từ vựng. Vui lòng thử lại.');
             })
             .finally(() => {
                 if (!controller.signal.aborted) setIsLoadingVocab(false);
@@ -133,10 +120,11 @@ export default function VocabList() {
         return () => {
             controller.abort();
         };
-    }, [selectedClass, selectedSeries, studyMode, vocabPage]);
+    }, [selectedClass, selectedSeries, studyMode, vocabPage, retryTick]);
 
     // 2. Khi chọn series, bắt đầu học từ trang đầu tiên.
     const handleSelectSeries = (seriesName) => {
+        setLoadError('');
         setSelectedSeries(seriesName);
         setVocabList([]);
         setVocabCount(0);
@@ -148,11 +136,11 @@ export default function VocabList() {
 
     // Phát âm từ vựng
     const handleSpeak = (word) => {
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(word);
-            utterance.lang = 'en-GB';
-            window.speechSynthesis.speak(utterance);
-        }
+        if (!word || !('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'en-GB';
+        window.speechSynthesis.speak(utterance);
     };
 
     const currentCard = vocabList[currentIndex];
@@ -205,7 +193,18 @@ export default function VocabList() {
                 </div>
 
                 {/* GIAO DIỆN 1: Chọn Lớp học trước */}
-                {!selectedClass ? (
+                {loadError ? (
+                    <div role="alert" className="bg-white p-10 rounded-3xl border border-rose-200 text-center space-y-4 shadow-sm">
+                        <p className="text-sm font-bold text-rose-600">{loadError}</p>
+                        <button
+                            type="button"
+                            onClick={() => setRetryTick((v) => v + 1)}
+                            className="px-5 py-2.5 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-2xl transition cursor-pointer"
+                        >
+                            Thử lại
+                        </button>
+                    </div>
+                ) : !selectedClass ? (
                     <>
                     {classList.length === 0 ? (
                         <div className="bg-white p-12 rounded-3xl border border-pink-100 text-center text-xs text-slate-400 shadow-sm">

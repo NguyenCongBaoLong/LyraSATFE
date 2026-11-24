@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import StudentSidebar from '../components/StudentSidebar';
 import NotificationBell from '../components/NotificationBell';
+import { safeGetUser } from '../utils/safeStorage';
 
 const EXAM_DATE_OPTIONS = ['2026-10-03', '2026-12-05', '2027-03-13', '2027-05-08'];
 
@@ -47,7 +48,7 @@ export default function MyAccount() {
     };
 
     useEffect(() => {
-        const storedUser = JSON.parse(localStorage.getItem('user')) || {};
+        const storedUser = safeGetUser();
         setUser(storedUser);
         if (storedUser.avatar) {
             setAvatarPreview(storedUser.avatar);

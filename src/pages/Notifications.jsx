@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Check, ArrowLeft } from 'lucide-react';
 import api from '../api';
+import { safeGetUser } from '../utils/safeStorage';
 import {
     formatRelativeTime,
     iconForNotificationType,
@@ -21,7 +22,7 @@ export default function Notifications() {
     const [loadError, setLoadError] = useState('');
     const requestIdRef = useRef(0);
 
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = safeGetUser();
     const userId = user.id;
 
     const fetchUnreadCount = useCallback(async () => {

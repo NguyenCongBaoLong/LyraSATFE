@@ -87,14 +87,16 @@ export default function TextHighlighter({
     // Clean up highlights when questionId changes or unmounts
     const cleanupDomHighlights = useCallback(() => {
         if (isNativeSupportedRef.current) {
+            highlightsMapRef.current.forEach((highlightName, range) => {
+                CSS.highlights?.get(highlightName)?.delete(range);
+            });
             HIGHLIGHT_COLORS.forEach(c => {
                 const highlightName = `sat-hl-${c.id}`;
                 const hl = CSS.highlights?.get(highlightName);
                 if (hl) {
-                    // Remove only ranges that belong to this container
                     const toDelete = [];
                     for (const range of hl.values()) {
-                        if (containerRef.current && (containerRef.current.contains(range.commonAncestorContainer))) {
+                        if (containerRef.current && containerRef.current.contains(range.commonAncestorContainer)) {
                             toDelete.push(range);
                         }
                     }
@@ -233,7 +235,8 @@ export default function TextHighlighter({
         if (isNativeSupportedRef.current) {
             // First, remove existing highlights overlapping this range from all colors to avoid stacking
             HIGHLIGHT_COLORS.forEach(c => {
-                const hl = CSS.highlights.get(`sat-hl-${c.id}`);
+                const highlightName = `sat-hl-${c.id}`;
+                const hl = CSS.highlights.get(highlightName);
                 if (hl) {
                     const toDelete = [];
                     for (const r of hl.values()) {
@@ -241,14 +244,19 @@ export default function TextHighlighter({
                             toDelete.push(r);
                         }
                     }
-                    toDelete.forEach(r => hl.delete(r));
+                    toDelete.forEach(r => {
+                        hl.delete(r);
+                        highlightsMapRef.current.delete(r);
+                    });
                 }
             });
 
             // Add new range to the target color highlight
-            const targetHighlight = CSS.highlights.get(`sat-hl-${colorId}`);
+            const targetHighlightName = `sat-hl-${colorId}`;
+            const targetHighlight = CSS.highlights.get(targetHighlightName);
             if (targetHighlight) {
                 targetHighlight.add(range);
+                highlightsMapRef.current.set(range, targetHighlightName);
             }
         } else {
             // DOM Fallback: Wrap range with <mark> safely

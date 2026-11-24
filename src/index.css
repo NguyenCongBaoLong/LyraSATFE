@@ -78,12 +78,14 @@
   word-break: normal;
 }
 
-/* Bảng nằm trong một đáp án A-D: gọn lại để không phình khung đáp án. */
+/* Bảng nằm trong một đáp án A-D: gọn lại và giữ nền trắng để chữ luôn rõ trên nền xanh/đỏ khi xem lại bài. */
 .option-rich .rich-table-wrapper {
   width: auto;
+  max-width: 100%;
   margin: 0;
-  border: 0;
-  background: transparent;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  background: #fff;
 }
 
 .option-rich .rich-table {
@@ -113,14 +115,38 @@
 /* Công thức Word (OMML) được backend đổi sang LaTeX và vẽ bằng KaTeX. */
 .rich-content .math-block {
   margin: 0.35rem 0 0.5rem;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
 }
 
 .rich-content .math-block .katex-display {
   margin: 0;
+  width: max-content;
+  min-width: 100%;
 }
 
 .rich-content .math-inline {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
   white-space: nowrap;
+}
+
+.rich-content sup,
+.rich-content sub {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.rich-content sup {
+  top: -0.45em;
+}
+
+.rich-content sub {
+  bottom: -0.2em;
 }

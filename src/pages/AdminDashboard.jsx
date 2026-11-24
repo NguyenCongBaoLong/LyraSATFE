@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { safeGetUser } from '../utils/safeStorage';
 
 // Import các component đã tách
 import CreateUserCard from '../components/admin/CreateUserCard';
@@ -34,6 +35,7 @@ export default function AdminDashboard() {
     const [studentPage, setStudentPage] = useState(1);
     const [studentListing, setStudentListing] = useState({ items: [], totalCount: 0 });
     const [studentSearch, setStudentSearch] = useState('');
+    const [debouncedStudentSearch, setDebouncedStudentSearch] = useState('');
     const [studentClassFilter, setStudentClassFilter] = useState('');
     const [studentRefresh, setStudentRefresh] = useState(0);
     const [isLoadingStudentsTab, setIsLoadingStudentsTab] = useState(false);
@@ -81,10 +83,21 @@ export default function AdminDashboard() {
     }, []);
 
     useEffect(() => {
+        const timeout = setTimeout(() => {
+            const trimmed = studentSearch.trim();
+            setDebouncedStudentSearch(prev => {
+                if (prev !== trimmed) setStudentPage(1);
+                return trimmed;
+            });
+        }, 300);
+        return () => clearTimeout(timeout);
+    }, [studentSearch]);
+
+    useEffect(() => {
         const controller = new AbortController();
-        if (activeTab === 'users') {
+        if (activeTab === 'users' || activeTab === 'students') {
             if (!hasLoadedClassOptions) loadClassOptions(controller.signal);
-        } else if (!hasLoadedTeacherOptions) {
+        } else if (activeTab === 'classes' && !hasLoadedTeacherOptions) {
             loadTeacherOptions(controller.signal);
         }
         return () => controller.abort();
@@ -136,16 +149,11 @@ export default function AdminDashboard() {
         const controller = new AbortController();
         setIsLoadingStudentsTab(true);
 
-        // Load class options if not loaded
-        if (!hasLoadedClassOptions) {
-            loadClassOptions(controller.signal);
-        }
-
         api.get('/admin/students', {
             params: {
                 page: studentPage,
                 pageSize: 10,
-                search: studentSearch || undefined,
+                search: debouncedStudentSearch || undefined,
                 classCode: studentClassFilter || undefined
             },
             signal: controller.signal
@@ -163,7 +171,7 @@ export default function AdminDashboard() {
             });
 
         return () => controller.abort();
-    }, [activeTab, studentPage, studentSearch, studentClassFilter, studentRefresh, hasLoadedClassOptions, loadClassOptions]);
+    }, [activeTab, studentPage, debouncedStudentSearch, studentClassFilter, studentRefresh]);
 
     // Xử lý Khóa / Mở khóa đăng nhập tài khoản học sinh
     const handleToggleUserStatus = async (studentId, currentIsActive, studentName) => {
@@ -426,13 +434,13 @@ export default function AdminDashboard() {
         const code = selectedClassForStudents.classCode || selectedClassForStudents.ClassCode;
         if (!window.confirm(`XÁC NHẬN CHUYỂN KEY CHÍNH:\nBạn có chắc chắn muốn chuyển Key Giáo viên chính của lớp ${code} cho cô/thầy ${teacherName}?`)) return;
         try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const user = safeGetUser();
             await api.post(`/classes/${code}/team/transfer-key`, {
                 newLeadTeacherId: teacherId,
                 requestUserId: user.id
             });
             showAlert("Thành công! 👑", `Đã chuyển quyền Giáo viên chính cho ${teacherName}!`);
-            fetchClasses(classPage);
+            setClassRefresh(v => v + 1);
             // Cập nhật lại danh sách giáo viên của lớp
             const res = await api.get(`/classes/${code}/team`, { params: { userId: user.id } });
             setClassTeachers(res.data.teachers || []);

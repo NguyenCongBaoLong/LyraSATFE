@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
     MessageSquare, 
     Send, 
@@ -16,6 +16,7 @@ import {
     AlertCircle
 } from 'lucide-react';
 import api from '../api';
+import { safeGetUser } from '../utils/safeStorage';
 
 // Format relative time in Vietnamese
 const formatRelativeTime = (dateInput) => {
@@ -63,18 +64,16 @@ export default function QuestionDiscussion({
     // Current user resolution
     const currentUser = useMemo(() => {
         if (propUser) return propUser;
-        try {
-            const saved = localStorage.getItem('user');
-            if (saved) return JSON.parse(saved);
-        } catch (e) {
-            console.error('Error reading user from localStorage:', e);
-        }
+        const saved = safeGetUser();
+        if (saved && saved.id) return saved;
         return {
-            id: 1,
-            fullName: 'Học viên',
+            id: null,
+            fullName: 'Khách',
             role: 'Student'
         };
     }, [propUser]);
+
+    const loadControllerRef = useRef(null);
 
     const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -142,34 +141,42 @@ export default function QuestionDiscussion({
         setErrorMsg('');
     }
 
-    // Load comments for active question
-    const loadComments = useCallback(async () => {
+    // Load comments for active question (silent=true khi refresh nền để không làm mất bản nháp)
+    const loadComments = useCallback(async ({ silent = false } = {}) => {
         if (!questionId) return;
-        setLoading(true);
+        loadControllerRef.current?.abort();
+        const controller = new AbortController();
+        loadControllerRef.current = controller;
+
+        if (!silent) setLoading(true);
         setLoadError('');
         try {
             const userParam = currentUser?.id ? `?userId=${currentUser.id}` : '';
-            const res = await api.get(`/comments/question/${questionId}${userParam}`);
+            const res = await api.get(`/comments/question/${questionId}${userParam}`, {
+                signal: controller.signal
+            });
             const data = Array.isArray(res.data) ? res.data : (res.data?.comments || []);
             setComments(data.map(normalizeComment));
         } catch (err) {
+            if (err.code === 'ERR_CANCELED') return;
             console.error('Lỗi tải bình luận:', err);
             // Không được giả vờ "chưa có bình luận nào" khi API lỗi
             setLoadError('Không tải được bình luận. Kiểm tra kết nối rồi thử lại.');
         } finally {
-            setLoading(false);
+            if (!controller.signal.aborted && !silent) setLoading(false);
         }
     }, [questionId, currentUser]);
 
     useEffect(() => {
         if (!questionId) return;
         loadComments();
+        return () => loadControllerRef.current?.abort();
     }, [questionId, loadComments]);
 
-    // Tải lại khi người dùng quay lại tab/app, để thấy phản hồi mới của giáo viên
+    // Tải lại ngầm khi người dùng quay lại tab/app, không unmount ô nhập đang gõ
     useEffect(() => {
         const handleVisible = () => {
-            if (document.visibilityState === 'visible') loadComments();
+            if (document.visibilityState === 'visible') loadComments({ silent: true });
         };
         document.addEventListener('visibilitychange', handleVisible);
         return () => document.removeEventListener('visibilitychange', handleVisible);
@@ -200,14 +207,14 @@ export default function QuestionDiscussion({
     const handleAddComment = async (e) => {
         e.preventDefault();
         const content = newCommentText.trim();
-        if (!content || submitting) return;
+        if (!content || submitting || !currentUser?.id) return;
 
         setSubmitting(true);
         const tempId = `temp-${Date.now()}`;
         const newCommentObj = {
             id: tempId,
             questionId,
-            userId: currentUser?.id || 1,
+            userId: currentUser.id,
             authorName: currentUser?.fullName || currentUser?.name || 'Học viên',
             authorRole: currentUser?.role || 'Student',
             content,
@@ -245,7 +252,7 @@ export default function QuestionDiscussion({
     // Submit reply to a root comment
     const handleAddReply = async (parentCommentId) => {
         const content = replyText.trim();
-        if (!content || submitting) return;
+        if (!content || submitting || !currentUser?.id) return;
 
         setSubmitting(true);
         const tempReplyId = `temp-reply-${Date.now()}`;
@@ -253,7 +260,7 @@ export default function QuestionDiscussion({
             id: tempReplyId,
             questionId,
             parentId: parentCommentId,
-            userId: currentUser?.id || 1,
+            userId: currentUser.id,
             authorName: currentUser?.fullName || currentUser?.name || 'Học viên',
             authorRole: currentUser?.role || 'Student',
             content,
@@ -317,27 +324,26 @@ export default function QuestionDiscussion({
     const handleTogglePin = async (commentId) => {
         if (!isTeacherOrAdmin) return;
 
-        let targetComment = null;
-        setComments(prev => prev.map(c => {
-            if (c.id === commentId) {
-                targetComment = { ...c, isPinned: !c.isPinned };
-                return targetComment;
-            }
-            return c;
-        }));
+        const target = comments.find(c => c.id === commentId);
+        if (!target) return;
+        const nextPinned = !target.isPinned;
+
+        setComments(prev => prev.map(c => (c.id === commentId ? { ...c, isPinned: nextPinned } : c)));
 
         try {
             await api.post(`/comments/${commentId}/pin`, {
                 userId: currentUser?.id,
-                isPinned: targetComment?.isPinned
+                isPinned: nextPinned
             });
         } catch (err) {
             console.warn('API pin toggle failed:', err);
+            setComments(prev => prev.map(c => (c.id === commentId ? { ...c, isPinned: target.isPinned } : c)));
         }
     };
 
-    // Toggle Like reaction with optimistic UI
+    // Toggle Like reaction with optimistic UI & rollback
     const handleToggleLike = async (commentId, isReply = false, parentId = null) => {
+        const prevComments = comments;
         setComments(prev => {
             return prev.map(c => {
                 if (!isReply && c.id === commentId) {
@@ -375,6 +381,7 @@ export default function QuestionDiscussion({
             });
         } catch (err) {
             console.warn('API like toggle failed:', err);
+            setComments(prevComments);
         }
     };
 
@@ -423,11 +430,12 @@ export default function QuestionDiscussion({
         });
     };
 
-    // Execute Delete with soft delete rule
+    // Execute Delete with soft delete rule & rollback on failure
     const handleExecuteDelete = async () => {
         const { commentId, isReply, parentCommentId } = confirmDeleteModal;
         if (!commentId) return;
 
+        const prevComments = comments;
         setConfirmDeleteModal({ isOpen: false, commentId: null, isReply: false, parentCommentId: null });
 
         setComments(prev => {
@@ -467,6 +475,8 @@ export default function QuestionDiscussion({
             });
         } catch (err) {
             console.warn('API delete comment failed:', err);
+            setComments(prevComments);
+            alert(err.response?.data?.message || 'Không xóa được bình luận. Vui lòng thử lại!');
         }
     };
 

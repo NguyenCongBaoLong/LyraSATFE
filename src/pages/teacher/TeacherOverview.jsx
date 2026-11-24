@@ -7,6 +7,7 @@ import VideoPlayer from '../../components/VideoPlayer';
 import VideoGallery from '../../components/VideoGallery';
 import TestVideoModal from '../../components/TestVideoModal';
 import RichContent from '../../components/RichContent';
+import { safeGetUser } from '../../utils/safeStorage';
 
 const TEST_PAGE_SIZE = 6;
 const SUBMISSION_PAGE_SIZE = 8;
@@ -55,7 +56,13 @@ export default function TeacherOverview() {
     // Deep-link từ thông báo (giáo viên)
     const [searchParams] = useSearchParams();
     const [pendingDeepLink, setPendingDeepLink] = useState(null);
-    const deepLinkHandledRef = useRef(false);
+    const deepLinkHandledRef = useRef('');
+
+    const [prevSelectedClass, setPrevSelectedClass] = useState(selectedClass);
+    if (selectedClass !== prevSelectedClass) {
+        setPrevSelectedClass(selectedClass);
+        setTestPage(1);
+    }
 
     // Gắn link video riêng cho từng câu hỏi (chỉ học sinh thấy khi xem lại đúng câu đó)
     const [qVideoInput, setQVideoInput] = useState('');
@@ -98,7 +105,7 @@ export default function TeacherOverview() {
             return;
         }
         try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const user = safeGetUser();
             await api.delete(`/tests/${testId}`, {
                 params: { userId: user.id }
             });
@@ -205,11 +212,11 @@ export default function TeacherOverview() {
 
     // Deep-link: tự chọn đúng đề khi bấm thông báo.
     useEffect(() => {
-        if (deepLinkHandledRef.current) return;
+        const linkKey = searchParams.toString();
         const testIdParam = searchParams.get('testId');
-        if (!testIdParam) return;
+        if (!linkKey || !testIdParam || deepLinkHandledRef.current === linkKey) return;
 
-        deepLinkHandledRef.current = true;
+        deepLinkHandledRef.current = linkKey;
         const studentIdParam = searchParams.get('studentId');
         const questionIdParam = searchParams.get('questionId');
         const commentIdParam = searchParams.get('commentId');
@@ -219,6 +226,7 @@ export default function TeacherOverview() {
         api.get(`/tests/${testIdParam}`)
             .then(res => {
                 setSelectedTest({ id: res.data.id, title: res.data.title, duration: res.data.duration });
+                setSubmissionPage(1);
                 setPendingDeepLink({ studentId: studentIdParam, questionId: questionIdParam });
             })
             .catch(err => {
@@ -625,17 +633,17 @@ export default function TeacherOverview() {
                             <div className={`flex-1 grid grid-cols-1 ${currentQ.passageText ? 'md:grid-cols-2' : ''} gap-px bg-pink-100 overflow-hidden`}>
                                 {/* Cột Trái: Passage - chỉ dựng khi câu có đoạn văn */}
                                 {currentQ.passageText && (
-                                <div className="bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
+                                <div className="min-w-0 bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
                                     <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
                                     <RichContent
                                         content={currentQ.passageText}
-                                        className="passage-content text-[15px] leading-relaxed text-slate-800 font-sans text-left"
+                                        className="text-[15px] leading-relaxed text-slate-800 font-sans text-left"
                                     />
                                 </div>
                                 )}
 
                                 {/* Cột Phải: Question & Discussion */}
-                                <div className={`bg-white p-10 overflow-y-auto flex flex-col justify-between ${currentQ.passageText ? '' : 'w-full max-w-4xl mx-auto'}`}>
+                                <div className={`min-w-0 bg-white p-10 overflow-y-auto flex flex-col justify-between ${currentQ.passageText ? '' : 'w-full max-w-4xl mx-auto'}`}>
                                     <div>
                                         <RichContent
                                             content={currentQ.questionText}
@@ -755,8 +763,8 @@ export default function TeacherOverview() {
                                                 { key: 'D', text: currentQ.optionD }
                                             ].map(opt => {
                                                 if (!opt.text) return null;
-                                                const isCorrectAns = opt.key.toUpperCase() === currentQ.correctAnswer.toUpperCase();
-                                                const isUserSelected = opt.key.toUpperCase() === currentQ.selectedAnswer.toUpperCase();
+                                                const isCorrectAns = opt.key.toUpperCase() === (currentQ.correctAnswer || '').toUpperCase();
+                                                const isUserSelected = opt.key.toUpperCase() === (currentQ.selectedAnswer || '').toUpperCase();
                                                 let containerStyle = "border-slate-200 bg-white text-slate-700";
                                                 let badgeStyle = "border-slate-300 text-slate-500";
                                                 if (isCorrectAns) {
@@ -771,7 +779,7 @@ export default function TeacherOverview() {
                                                         <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs shrink-0 ${badgeStyle}`}>
                                                             {opt.key}
                                                         </div>
-                                                        <RichContent content={opt.text} className="option-rich text-sm leading-relaxed" />
+                                                        <RichContent content={opt.text} className="option-rich flex-1 min-w-0 overflow-x-auto text-sm leading-relaxed" />
                                                     </div>
                                                 );
                                             })}

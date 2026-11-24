@@ -107,7 +107,8 @@ export default function TeacherUploadTest() {
 
         try {
             await api.post('/tests/upload-test', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
+                headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 120000
             });
             
             // Hiển thị modal thông báo thành công

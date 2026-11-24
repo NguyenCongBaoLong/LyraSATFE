@@ -12,6 +12,11 @@ import { resolveVideoSource } from '../utils/videoSource';
  */
 export default function VideoPlayer({ url, title = 'Video chữa bài', className = '', showOpenLink = true }) {
     const [fileFailed, setFileFailed] = useState(false);
+    const [prevUrl, setPrevUrl] = useState(url);
+    if (url !== prevUrl) {
+        setPrevUrl(url);
+        setFileFailed(false);
+    }
     const source = resolveVideoSource(url);
     const rawUrl = source?.kind === 'file' ? source.src : (url || '');
 

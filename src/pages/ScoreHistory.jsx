@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import StudentSidebar from '../components/StudentSidebar';
 import Pagination from '../components/Pagination';
@@ -8,10 +8,12 @@ import NotificationBell from '../components/NotificationBell';
 import VideoPlayer from '../components/VideoPlayer';
 import VideoGallery from '../components/VideoGallery';
 import RichContent from '../components/RichContent';
+import { safeGetUser } from '../utils/safeStorage';
 
 const PAGE_SIZE = 8;
 
 export default function ScoreHistory() {
+    const navigate = useNavigate();
     const [history, setHistory] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -21,15 +23,15 @@ export default function ScoreHistory() {
     const [historyError, setHistoryError] = useState('');
     const [focusCommentId, setFocusCommentId] = useState(null);
     const [searchParams] = useSearchParams();
-    const deepLinkHandledRef = useRef(false);
-    
+    const deepLinkHandledRef = useRef('');
+
     // State quản lý Modal xem lại bài làm (Review)
     const [reviewData, setReviewData] = useState(null);
     const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
     const [isViewingVideo, setIsViewingVideo] = useState(false);
     const [isLoadingReview, setIsLoadingReview] = useState(false);
 
-    const user = JSON.parse(localStorage.getItem('user')) || {};
+    const user = safeGetUser();
 
     useEffect(() => {
         const timeout = setTimeout(() => setDebouncedSearchTerm(searchTerm.trim()), 300);
@@ -37,10 +39,14 @@ export default function ScoreHistory() {
     }, [searchTerm]);
 
     useEffect(() => {
+        if (!user?.id) {
+            navigate('/');
+            return;
+        }
         setIsLoadingHistory(true);
         setHistoryError('');
         const controller = new AbortController();
-        api.get(`/submissions/history/${user.id || 1}`, {
+        api.get(`/submissions/history/${user.id}`, {
             params: { page, pageSize: PAGE_SIZE, search: debouncedSearchTerm },
             signal: controller.signal
         })
@@ -60,7 +66,7 @@ export default function ScoreHistory() {
         return () => {
             controller.abort();
         };
-    }, [debouncedSearchTerm, page, user.id]);
+    }, [debouncedSearchTerm, navigate, page, user?.id]);
 
     // Gọi API lấy thông tin chi tiết bài nộp để xem lại
     const handleOpenReview = async (submissionId, openVideoDirectly = false, targetQuestionId = null) => {
@@ -85,11 +91,11 @@ export default function ScoreHistory() {
 
     // Deep-link từ thông báo: mở đúng bài nộp của đề, nhảy đúng câu hỏi và bình luận.
     useEffect(() => {
-        if (deepLinkHandledRef.current) return;
+        const linkKey = searchParams.toString();
         const testIdParam = searchParams.get('testId');
-        if (!testIdParam || !user.id) return;
+        if (!linkKey || !testIdParam || !user?.id || deepLinkHandledRef.current === linkKey) return;
 
-        deepLinkHandledRef.current = true;
+        deepLinkHandledRef.current = linkKey;
         const questionIdParam = searchParams.get('questionId');
         const commentIdParam = searchParams.get('commentId');
         if (commentIdParam) setFocusCommentId(commentIdParam);
@@ -104,7 +110,7 @@ export default function ScoreHistory() {
                 }
             })
             .catch(err => console.error('Lỗi mở bài làm từ thông báo:', err));
-    }, [searchParams, user.id]);
+    }, [searchParams, user?.id]);
 
     const currentQ = reviewData?.questions?.[currentReviewIndex];
 
@@ -341,7 +347,7 @@ export default function ScoreHistory() {
                         ) : currentQ ? (
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100 overflow-hidden">
                                 {/* Cột Trái: Passage - Căn đầu */}
-                                <div className="bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
+                                <div className="min-w-0 bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
                                     <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
                                     {currentQ.passageText ? (
                                         <RichContent
@@ -356,7 +362,7 @@ export default function ScoreHistory() {
                                 </div>
 
                                 {/* Cột Phải: Question & Các đáp án được tô màu + Khung thảo luận */}
-                                <div className="bg-white p-10 overflow-y-auto flex flex-col justify-between">
+                                <div className="min-w-0 bg-white p-10 overflow-y-auto flex flex-col justify-between">
                                     <div>
                                         <RichContent
                                             content={currentQ.questionText}
@@ -421,8 +427,8 @@ export default function ScoreHistory() {
                                             ].map(opt => {
                                                 if (!opt.text) return null;
 
-                                                const isCorrectAns = opt.key.toUpperCase() === currentQ.correctAnswer.toUpperCase();
-                                                const isUserSelected = opt.key.toUpperCase() === currentQ.selectedAnswer.toUpperCase();
+                                                const isCorrectAns = opt.key.toUpperCase() === (currentQ.correctAnswer || '').toUpperCase();
+                                                const isUserSelected = opt.key.toUpperCase() === (currentQ.selectedAnswer || '').toUpperCase();
 
                                                 let containerStyle = "border-slate-200 bg-white text-slate-700";
                                                 let badgeStyle = "border-slate-300 text-slate-500";
@@ -440,10 +446,10 @@ export default function ScoreHistory() {
                                                         key={opt.key}
                                                         className={`flex items-center gap-4 p-4 rounded-2xl border transition ${containerStyle}`}
                                                     >
-                                                        <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs ${badgeStyle}`}>
+                                                        <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs shrink-0 ${badgeStyle}`}>
                                                             {opt.key}
                                                         </div>
-                                                        <RichContent content={opt.text} className="option-rich text-sm leading-relaxed" />
+                                                        <RichContent content={opt.text} className="option-rich flex-1 min-w-0 overflow-x-auto text-sm leading-relaxed" />
                                                     </div>
                                                 );
                                             })}

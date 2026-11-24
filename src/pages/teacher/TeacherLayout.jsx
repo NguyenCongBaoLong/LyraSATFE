@@ -4,17 +4,30 @@ import api from '../../api';
 import LogoutButton from '../../components/LogoutButton';
 import NotificationBell from '../../components/NotificationBell';
 import ClassTeachersModal from '../../components/ClassTeachersModal';
+import { safeGetUser } from '../../utils/safeStorage';
 
 export default function TeacherLayout() {
     const navigate = useNavigate();
     const location = useLocation();
-    const user = JSON.parse(localStorage.getItem('user')) || {};
+    const user = safeGetUser();
     const isAdmin = user.role === 'Admin';
     const teacherEmail = user.email || '';
 
     const [teacherClasses, setTeacherClasses] = useState([]);
     const [selectedClass, setSelectedClass] = useState(localStorage.getItem('teacher_selected_class') || '');
     const [showTeachersModal, setShowTeachersModal] = useState(false);
+    const [isDesktop, setIsDesktop] = useState(() =>
+        typeof window !== 'undefined' ? window.matchMedia('(min-width: 768px)').matches : true
+    );
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.matchMedia) return;
+        const mql = window.matchMedia('(min-width: 768px)');
+        const onChange = (e) => setIsDesktop(e.matches);
+        setIsDesktop(mql.matches);
+        mql.addEventListener('change', onChange);
+        return () => mql.removeEventListener('change', onChange);
+    }, []);
 
     const fetchTeacherClasses = useCallback(async () => {
         if (!teacherEmail) return;
@@ -81,7 +94,7 @@ export default function TeacherLayout() {
                             <span className="hidden xs:inline">Đội ngũ GV</span>
                         </button>
                     )}
-                    <NotificationBell align="right" />
+                    {!isDesktop && <NotificationBell align="right" />}
                 </div>
             </header>
 
@@ -90,7 +103,7 @@ export default function TeacherLayout() {
                 <div>
                     <div className="flex items-center justify-between mb-6">
                         <div className="text-xl font-black text-pink-600 tracking-wider">LYRA SAT</div>
-                        <NotificationBell align="left" />
+                        {isDesktop && <NotificationBell align="left" />}
                     </div>
 
                     {isAdmin && (
@@ -109,7 +122,7 @@ export default function TeacherLayout() {
                             </p>
                             <button
                                 type="button"
-                                onClick={() => navigate('/admin')}
+                                onClick={() => navigate('/admin/dashboard')}
                                 className="mt-2.5 w-full py-2 bg-white text-purple-700 hover:bg-purple-50 text-[11px] font-black rounded-xl transition cursor-pointer shadow-xs flex items-center justify-center gap-1.5 active:scale-95"
                             >
                                 <span>⬅️</span>
