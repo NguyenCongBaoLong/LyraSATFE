@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import axios from 'axios';
 import { Link2, Upload, Trash2, X, Loader2 } from 'lucide-react';
 import api from '../api';
 
 const MAX_VIDEO_MB = 150;
+const SUPABASE_RECOMMENDED_MB = 50;
 
 /**
  * Quản lý NHIỀU video chữa bài cho một đề đã giao.
@@ -23,6 +25,7 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
     const [error, setError] = useState('');
     const [progressLabel, setProgressLabel] = useState('');
     const fileInputRef = useRef(null);
+    const uploadAbortRef = useRef(null);
 
     const testId = test?.id;
 
@@ -42,7 +45,11 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
     }, [testId]);
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {
+            uploadAbortRef.current?.abort();
+            uploadAbortRef.current = null;
+            return;
+        }
         setMode('link');
         setLink('');
         setTitle('');
@@ -54,7 +61,18 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
         loadVideos();
     }, [isOpen, test?.videoExplanationUrl, loadVideos]);
 
+    useEffect(() => () => {
+        uploadAbortRef.current?.abort();
+        uploadAbortRef.current = null;
+    }, []);
+
     if (!isOpen || !test) return null;
+
+    const handleClose = () => {
+        uploadAbortRef.current?.abort();
+        uploadAbortRef.current = null;
+        onClose?.();
+    };
 
     const pickFile = (f) => {
         if (!f) return;
@@ -72,6 +90,7 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
         setIsSaving(true);
         try {
             let created = null;
+            let nextLegacy = legacyUrl;
             if (mode === 'link') {
                 const url = link.trim();
                 if (!url) {
@@ -81,6 +100,9 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                 }
                 const res = await api.post(`/testvideos/test/${test.id}`, { url, title: title.trim() || null });
                 created = res.data?.video;
+                if (res.data?.videoExplanationUrl !== undefined) {
+                    nextLegacy = res.data.videoExplanationUrl;
+                }
             } else {
                 if (!file) {
                     setError('Hãy chọn file video trước khi tải lên.');
@@ -90,26 +112,41 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                 const formData = new FormData();
                 formData.append('file', file);
                 if (title.trim()) formData.append('title', title.trim());
-                setProgressLabel('Đang tải video lên lưu trữ đám mây, đừng đóng cửa sổ này...');
+                const controller = new AbortController();
+                uploadAbortRef.current = controller;
+                setProgressLabel('Đang tải video lên lưu trữ đám mây (0%)...');
                 const res = await api.post(`/testvideos/test/${test.id}/file`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
-                    timeout: 10 * 60 * 1000
+                    timeout: 10 * 60 * 1000,
+                    signal: controller.signal,
+                    onUploadProgress: (evt) => {
+                        if (evt.total > 0) {
+                            const pct = Math.min(99, Math.round((evt.loaded / evt.total) * 100));
+                            setProgressLabel(`Đang tải video lên lưu trữ đám mây (${pct}%)...`);
+                        }
+                    }
                 });
                 created = res.data?.video;
+                if (res.data?.videoExplanationUrl !== undefined) {
+                    nextLegacy = res.data.videoExplanationUrl;
+                }
             }
 
             if (created) {
                 const next = [...videos, created];
                 setVideos(next);
-                onSaved?.(next);
+                setLegacyUrl(nextLegacy);
+                onSaved?.(next, nextLegacy);
             }
             setLink('');
             setTitle('');
             setFile(null);
         } catch (err) {
+            if (axios.isCancel(err) || err.code === 'ERR_CANCELED') return;
             console.error('Lỗi thêm video chữa bài:', err);
             setError(err.response?.data?.message || 'Không thêm được video. Kiểm tra kết nối rồi thử lại.');
         } finally {
+            uploadAbortRef.current = null;
             setIsSaving(false);
             setProgressLabel('');
         }
@@ -120,10 +157,12 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
         setBusyId(video.id);
         setError('');
         try {
-            await api.delete(`/testvideos/${video.id}`);
+            const res = await api.delete(`/testvideos/${video.id}`);
             const next = videos.filter(v => v.id !== video.id);
+            const nextLegacy = res.data?.videoExplanationUrl !== undefined ? res.data.videoExplanationUrl : legacyUrl;
             setVideos(next);
-            onSaved?.(next);
+            setLegacyUrl(nextLegacy);
+            onSaved?.(next, nextLegacy);
         } catch (err) {
             console.error('Lỗi gỡ video:', err);
             setError(err.response?.data?.message || 'Không gỡ được video. Thử lại sau.');
@@ -139,7 +178,7 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
         try {
             await api.put(`/tests/${test.id}/video`, { videoExplanationUrl: '' });
             setLegacyUrl('');
-            onSaved?.([]);
+            onSaved?.(videos, '');
         } catch (err) {
             console.error('Lỗi gỡ video cũ:', err);
             setError(err.response?.data?.message || 'Không gỡ được video cũ. Thử lại sau.');
@@ -165,7 +204,7 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                     </div>
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={handleClose}
                         aria-label="Đóng"
                         className="p-2 rounded-xl bg-pink-50 hover:bg-pink-100 text-pink-600 transition cursor-pointer"
                     >
@@ -307,13 +346,21 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                                 id="video-modal-file"
                                 ref={fileInputRef}
                                 type="file"
-                                accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
+                                accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg,.mp4,.webm,.mov,.m4v,.ogv"
                                 className="hidden"
-                                onChange={(e) => pickFile(e.target.files?.[0])}
+                                onChange={(e) => {
+                                    pickFile(e.target.files?.[0]);
+                                    e.target.value = '';
+                                }}
                             />
                             <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mt-2 leading-relaxed">
-                                File video tải lên được lưu lâu dài trên lưu trữ đám mây (không bị mất khi cập nhật hệ thống). Nên dùng <strong>.mp4</strong> để xem mượt trên mọi thiết bị; file lớn hơn 50MB nên đăng YouTube / Google Drive rồi dán link.
+                                File video tải lên được lưu lâu dài trên lưu trữ đám mây (không bị mất khi cập nhật hệ thống). Nên dùng <strong>.mp4</strong> để xem mượt trên mọi thiết bị; lưu trữ đám mây thường giới hạn {SUPABASE_RECOMMENDED_MB}MB — file lớn hơn nên đăng YouTube / Google Drive rồi dán link.
                             </p>
+                            {file && file.size > SUPABASE_RECOMMENDED_MB * 1024 * 1024 && (
+                                <p className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mt-2">
+                                    File này lớn hơn {SUPABASE_RECOMMENDED_MB}MB, máy chủ đám mây có thể từ chối (lỗi 413). Nếu tải lên báo lỗi dung lượng, hãy nén nhỏ hơn hoặc dán link YouTube / Google Drive.
+                                </p>
+                            )}
                         </div>
                     )}
 
@@ -330,10 +377,10 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                 <div className="p-5 pt-0 flex gap-2">
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="flex-1 py-3 rounded-2xl bg-white border border-pink-100 text-xs font-bold text-slate-600 hover:bg-pink-50 transition cursor-pointer"
                     >
-                        Xong
+                        {isSaving ? 'Hủy & Đóng' : 'Xong'}
                     </button>
                     <button
                         type="button"

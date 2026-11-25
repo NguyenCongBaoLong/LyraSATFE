@@ -49,7 +49,9 @@ const VULGAR_FRACTIONS = {
     '⅙': '\\frac{1}{6}', '⅚': '\\frac{5}{6}', '⅛': '\\frac{1}{8}'
 };
 
-function isPlainMath(text) {
+const DATE_STRING_REGEX = /^\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{2,4}$/;
+
+export function isPlainMath(text) {
     if (!text || text.length > 200) return false;
     // Hệ phương trình nhiều dòng để nguyên, bọc span sẽ làm mất xuống dòng.
     if (text.includes('\n') || text.includes('\r')) return false;
@@ -57,11 +59,13 @@ function isPlainMath(text) {
     if (text.includes('\\')) return false;
     // Có chữ tiếng Việt là câu văn, không phải công thức.
     if (/[À-ỹ]/.test(text)) return false;
+    // Không biến ngày tháng (vd: 12/25/2026) thành phân số
+    if (DATE_STRING_REGEX.test(text.trim())) return false;
 
     const hasMathSignal = /[\^√]/.test(text) || text.includes('=') || /\d\s*\/\s*\d/.test(text);
     if (!hasMathSignal) return false;
 
-    const allowed = /^[A-Za-z0-9\s+\-*/^()[\]{}.,=<>_√²³⁴⁵⁶⁷⁸⁹⁰⁻⁺₀-₉π∞·×÷±≠≤≥–—−°½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛|]+$/;
+    const allowed = /^[A-Za-z0-9\s+\-*/^()[\]{}.,=<>!_√²³⁴⁵⁶⁷⁸⁹⁰⁻⁺₀-₉π∞·×÷±≠≤≥–—−°½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛|]+$/;
     if (!allowed.test(text)) return false;
 
     // Câu văn thường có từ dài; công thức chỉ có biến một hai ký tự và vài hàm quen thuộc.
@@ -71,7 +75,7 @@ function isPlainMath(text) {
     return true;
 }
 
-function plainTextToLatex(text) {
+export function plainTextToLatex(text) {
     let latex = text.trim();
 
     latex = latex.replace(/[–—−]/g, '-');
@@ -84,6 +88,9 @@ function plainTextToLatex(text) {
     latex = latex.replace(/≠/g, '\\neq ');
     latex = latex.replace(/≤/g, '\\le ');
     latex = latex.replace(/≥/g, '\\ge ');
+    latex = latex.replace(/<=/g, '\\le ');
+    latex = latex.replace(/>=/g, '\\ge ');
+    latex = latex.replace(/!=/g, '\\neq ');
     latex = latex.replace(/°/g, '^{\\circ}');
     latex = latex.replace(/[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛]/g, (match) => VULGAR_FRACTIONS[match]);
     latex = latex.replace(/[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (run) => `^{${[...run].map((char) => SUPERSCRIPT_DIGITS[char]).join('')}}`);
@@ -110,8 +117,8 @@ function plainTextToLatex(text) {
     latex = latex.replace(/(?<![\w.])(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)(?![\w.])/g, '\\frac{$1}{$2}');
     // Phân số đơn giản: r^{2}/4, x/2
     latex = latex.replace(/([A-Za-z](?:\^\{[^{}]*\})?)\s*\/\s*(\d+|[A-Za-z])/g, '\\frac{$1}{$2}');
-    // Bỏ ngoặc thừa quanh phân số: (\frac{2}{9}) -> \frac{2}{9}
-    latex = latex.replace(/\(\\frac\{([^{}]*)\}\{([^{}]*)\}\)/g, '\\frac{$1}{$2}');
+    // Giữ ngoặc quanh phân số để 100(1/2)^x, 3(2/3), (1/2)^2 không mất dấu ngoặc
+    latex = latex.replace(/\(\\frac\{([^{}]*)\}\{([^{}]*)\}\)/g, '\\left(\\frac{$1}{$2}\\right)');
     // ⅓. t -> \frac{1}{3}\cdot t
     latex = latex.replace(/(\\frac\{[^{}]*\}\{[^{}]*\})\.\s*/g, '$1\\cdot ');
 
@@ -122,6 +129,7 @@ function plainTextToLatex(text) {
 }
 
 const INLINE_FORMULA = /[A-Za-z]\([^()]{0,12}\)\s*=\s*[^,;]+?(?=\.(?:\s|$)|[,;]|$)/g;
+const TRAILING_ENGLISH_CLAUSE = /\s+(?:where|for|when|if|and|or|in|on|with|such|that|which|is|are|represents?|models?|gives?)\b.*$/i;
 
 function upgradeMathNodesInDocument(documentFragment) {
     const bodyText = documentFragment.body.textContent || '';
@@ -169,7 +177,7 @@ function upgradeMathNodesInDocument(documentFragment) {
         let match = regex.exec(raw);
 
         while (match !== null) {
-            const formula = match[0].trim();
+            const formula = match[0].trim().replace(TRAILING_ENGLISH_CLAUSE, '').trim();
             const start = match.index + match[0].indexOf(formula);
 
             if (start >= lastIndex && isPlainMath(formula)) {

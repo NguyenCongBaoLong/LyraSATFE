@@ -79,6 +79,8 @@ export default function DoTest() {
     const [testData, setTestData] = useState(null);
     const [questions, setQuestions] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [loadError, setLoadError] = useState('');
+    const [reloadTick, setReloadTick] = useState(0);
 
     // Trạng thái kiểm tra lượt làm bài
     const [allowed, setAllowed] = useState(true);
@@ -178,9 +180,11 @@ export default function DoTest() {
         }
     }, [markedQuestions, marksKey]);
 
+    // biome-ignore lint/correctness/useExhaustiveDependencies: reloadTick retries fetching test on error
     useEffect(() => {
         if (checkingAttempt || !allowed || !studentId) return;
 
+        setLoadError('');
         const controller = new AbortController();
         api.get(`/tests/${id}`, { signal: controller.signal })
             .then(res => {
@@ -243,10 +247,11 @@ export default function DoTest() {
             .catch(err => {
                 if (err.code === 'ERR_CANCELED') return;
                 console.error("Lỗi tải bài test:", err);
+                setLoadError(err.response?.data?.message || 'Không tải được đề thi. Vui lòng kiểm tra kết nối và thử lại.');
             });
 
         return () => controller.abort();
-    }, [id, checkingAttempt, allowed, studentId, timeLeftKey, startTimeKey]);
+    }, [id, checkingAttempt, allowed, studentId, timeLeftKey, startTimeKey, reloadTick]);
 
     const handleConfirmSubmit = useCallback(async () => {
         if (isSubmittingRef.current) return;
@@ -357,6 +362,34 @@ export default function DoTest() {
                             className="flex-1 py-3 bg-white border border-pink-200 hover:bg-pink-50 text-slate-700 font-bold text-xs rounded-2xl transition cursor-pointer"
                         >
                             Danh sách nhiệm vụ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4 font-sans">
+                <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-pink-100 text-center space-y-4">
+                    <div className="w-14 h-14 mx-auto rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-2xl">⚠️</div>
+                    <h2 className="text-lg font-black text-slate-800">Không tải được đề thi</h2>
+                    <p className="text-xs text-slate-500 leading-relaxed">{loadError}</p>
+                    <div className="flex gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/mission')}
+                            className="flex-1 py-2.5 rounded-2xl border border-pink-200 bg-white hover:bg-pink-50 text-xs font-bold text-slate-700 cursor-pointer transition"
+                        >
+                            Danh sách nhiệm vụ
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setReloadTick((prev) => prev + 1)}
+                            className="flex-1 py-2.5 rounded-2xl bg-pink-600 hover:bg-pink-700 text-xs font-bold text-white shadow-md shadow-pink-600/20 cursor-pointer transition"
+                        >
+                            Thử tải lại
                         </button>
                     </div>
                 </div>

@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import TestVideoModal from '../../components/TestVideoModal';
+import { safeGetUser } from '../../utils/safeStorage';
 
 // Số video chữa bài của một đề (đề cũ chỉ có 1 link nên coi như 1 video).
 const videoCountOf = (test) =>
-    test?.videoCount ?? (test?.videoExplanationUrl ? 1 : 0);
+    test?.videoCount > 0 ? test.videoCount : (test?.videoExplanationUrl ? 1 : 0);
 
 export default function TeacherUploadTest() {
     const { selectedClass } = useOutletContext();
@@ -45,7 +46,7 @@ export default function TeacherUploadTest() {
             return;
         }
         try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const user = safeGetUser();
             await api.delete(`/tests/${testId}`, {
                 params: { userId: user.id }
             });

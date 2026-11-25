@@ -238,7 +238,7 @@ export default function QuestionDiscussion({
             });
             const savedComment = res.data?.comment || res.data;
             if (savedComment && savedComment.id) {
-                setComments(prev => prev.map(c => c.id === tempId ? { ...newCommentObj, ...savedComment } : c));
+                setComments(prev => prev.map(c => (c.id === tempId ? normalizeComment({ ...newCommentObj, ...savedComment }) : c)));
             }
         } catch (err) {
             console.error('Lỗi khi gửi bình luận:', err);
@@ -300,7 +300,7 @@ export default function QuestionDiscussion({
                     if (c.id === parentCommentId) {
                         return {
                             ...c,
-                            replies: (c.replies || []).map(r => r.id === tempReplyId ? { ...newReplyObj, ...savedReply } : r)
+                            replies: (c.replies || []).map(r => (r.id === tempReplyId ? normalizeComment({ ...newReplyObj, ...savedReply }) : r))
                         };
                     }
                     return c;
@@ -341,38 +341,37 @@ export default function QuestionDiscussion({
         }
     };
 
-    // Toggle Like reaction with optimistic UI & rollback
+    // Toggle Like reaction with optimistic UI & functional rollback
     const handleToggleLike = async (commentId, isReply = false, parentId = null) => {
-        const prevComments = comments;
-        setComments(prev => {
-            return prev.map(c => {
-                if (!isReply && c.id === commentId) {
-                    const nextLiked = !c.isLiked;
-                    return {
-                        ...c,
-                        isLiked: nextLiked,
-                        likesCount: nextLiked ? (c.likesCount || 0) + 1 : Math.max(0, (c.likesCount || 1) - 1)
-                    };
-                }
-                if (isReply && c.id === parentId) {
-                    return {
-                        ...c,
-                        replies: (c.replies || []).map(r => {
-                            if (r.id === commentId) {
-                                const nextLiked = !r.isLiked;
-                                return {
-                                    ...r,
-                                    isLiked: nextLiked,
-                                    likesCount: nextLiked ? (r.likesCount || 0) + 1 : Math.max(0, (r.likesCount || 1) - 1)
-                                };
-                            }
-                            return r;
-                        })
-                    };
-                }
-                return c;
-            });
+        const toggleInList = (list) => list.map(c => {
+            if (!isReply && c.id === commentId) {
+                const nextLiked = !c.isLiked;
+                return {
+                    ...c,
+                    isLiked: nextLiked,
+                    likesCount: nextLiked ? (c.likesCount || 0) + 1 : Math.max(0, (c.likesCount || 1) - 1)
+                };
+            }
+            if (isReply && c.id === parentId) {
+                return {
+                    ...c,
+                    replies: (c.replies || []).map(r => {
+                        if (r.id === commentId) {
+                            const nextLiked = !r.isLiked;
+                            return {
+                                ...r,
+                                isLiked: nextLiked,
+                                likesCount: nextLiked ? (r.likesCount || 0) + 1 : Math.max(0, (r.likesCount || 1) - 1)
+                            };
+                        }
+                        return r;
+                    })
+                };
+            }
+            return c;
         });
+
+        setComments(toggleInList);
 
         try {
             await api.post(`/comments/${commentId}/reaction`, {
@@ -381,7 +380,7 @@ export default function QuestionDiscussion({
             });
         } catch (err) {
             console.warn('API like toggle failed:', err);
-            setComments(prevComments);
+            setComments(toggleInList);
         }
     };
 
@@ -430,18 +429,21 @@ export default function QuestionDiscussion({
         });
     };
 
-    // Execute Delete with soft delete rule & rollback on failure
+    // Execute Delete with soft delete rule & functional rollback on failure
     const handleExecuteDelete = async () => {
         const { commentId, isReply, parentCommentId } = confirmDeleteModal;
         if (!commentId) return;
 
-        const prevComments = comments;
+        let removedSnapshot = null;
+        let removedIndex = -1;
         setConfirmDeleteModal({ isOpen: false, commentId: null, isReply: false, parentCommentId: null });
 
         setComments(prev => {
             if (!isReply) {
-                return prev.flatMap(c => {
+                return prev.flatMap((c, idx) => {
                     if (c.id === commentId) {
+                        removedSnapshot = c;
+                        removedIndex = idx;
                         // Soft delete if replies exist: preserve reply tree!
                         if (c.replies && c.replies.length > 0) {
                             return [{
@@ -455,17 +457,22 @@ export default function QuestionDiscussion({
                     }
                     return [c];
                 });
-            } else {
-                return prev.map(c => {
-                    if (c.id === parentCommentId) {
-                        return {
-                            ...c,
-                            replies: (c.replies || []).filter(r => r.id !== commentId)
-                        };
-                    }
-                    return c;
-                });
             }
+            return prev.map(c => {
+                if (c.id === parentCommentId) {
+                    const replies = c.replies || [];
+                    const rIdx = replies.findIndex(r => r.id === commentId);
+                    if (rIdx >= 0) {
+                        removedSnapshot = replies[rIdx];
+                        removedIndex = rIdx;
+                    }
+                    return {
+                        ...c,
+                        replies: replies.filter(r => r.id !== commentId)
+                    };
+                }
+                return c;
+            });
         });
 
         try {
@@ -475,7 +482,27 @@ export default function QuestionDiscussion({
             });
         } catch (err) {
             console.warn('API delete comment failed:', err);
-            setComments(prevComments);
+            if (removedSnapshot) {
+                setComments(prev => {
+                    if (!isReply) {
+                        if (prev.some(c => c.id === commentId)) {
+                            return prev.map(c => (c.id === commentId ? removedSnapshot : c));
+                        }
+                        const copy = [...prev];
+                        const insertAt = removedIndex >= 0 && removedIndex <= copy.length ? removedIndex : copy.length;
+                        copy.splice(insertAt, 0, removedSnapshot);
+                        return copy;
+                    }
+                    return prev.map(c => {
+                        if (c.id !== parentCommentId) return c;
+                        const replies = [...(c.replies || [])];
+                        if (replies.some(r => r.id === commentId)) return c;
+                        const insertAt = removedIndex >= 0 && removedIndex <= replies.length ? removedIndex : replies.length;
+                        replies.splice(insertAt, 0, removedSnapshot);
+                        return { ...c, replies };
+                    });
+                });
+            }
             alert(err.response?.data?.message || 'Không xóa được bình luận. Vui lòng thử lại!');
         }
     };

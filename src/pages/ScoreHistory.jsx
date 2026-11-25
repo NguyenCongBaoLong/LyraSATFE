@@ -163,7 +163,7 @@ export default function ScoreHistory() {
                                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-pink-100">
                                     <div 
                                         className="h-full bg-pink-500 transition-all duration-500" 
-                                        style={{ width: `${item.score || ((item.correctCount / item.totalQuestions) * 100)}%` }}
+                                        style={{ width: `${item.score ?? (item.totalQuestions > 0 ? (item.correctCount / item.totalQuestions) * 100 : 0)}%` }}
                                     ></div>
                                 </div>
 
@@ -353,24 +353,20 @@ export default function ScoreHistory() {
                                 </div>
                             </div>
                         ) : currentQ ? (
-                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-px bg-pink-100 overflow-hidden">
-                                {/* Cột Trái: Passage - Căn đầu */}
-                                <div className="min-w-0 bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
-                                    <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
-                                    {currentQ.passageText ? (
+                            <div className={`flex-1 grid grid-cols-1 ${currentQ.passageText?.trim() ? 'md:grid-cols-2' : ''} gap-px bg-pink-100 overflow-hidden`}>
+                                {/* Cột Trái: Passage - Chỉ dựng khi có đoạn văn bản */}
+                                {currentQ.passageText?.trim() && (
+                                    <div className="min-w-0 bg-white p-6 md:p-8 overflow-y-auto flex flex-col justify-start">
+                                        <span className="text-[11px] font-bold text-pink-500 uppercase tracking-widest mb-3 block">Reading Passage</span>
                                         <RichContent
                                             content={currentQ.passageText}
                                             className="text-[15px] leading-relaxed text-slate-800 font-sans text-left"
                                         />
-                                    ) : (
-                                        <p className="text-[15px] leading-relaxed text-slate-800 font-sans text-left">
-                                            Đọc kỹ đoạn văn bản dưới đây và trả lời câu hỏi ở khung bên phải.
-                                        </p>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
 
                                 {/* Cột Phải: Question & Các đáp án được tô màu + Khung thảo luận */}
-                                <div className="min-w-0 bg-white p-10 overflow-y-auto flex flex-col justify-between">
+                                <div className={`min-w-0 bg-white p-10 overflow-y-auto flex flex-col justify-between ${currentQ.passageText?.trim() ? '' : 'w-full max-w-4xl mx-auto'}`}>
                                     <div>
                                         <RichContent
                                             content={currentQ.questionText}

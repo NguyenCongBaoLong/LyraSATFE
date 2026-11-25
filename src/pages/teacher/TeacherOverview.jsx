@@ -14,7 +14,7 @@ const SUBMISSION_PAGE_SIZE = 8;
 
 // Số video chữa bài của một đề (đề cũ chỉ có 1 link nên coi như 1 video).
 const videoCountOf = (test) =>
-    test?.videoCount ?? (test?.videoExplanationUrl ? 1 : 0);
+    test?.videoCount > 0 ? test.videoCount : (test?.videoExplanationUrl ? 1 : 0);
 
 export default function TeacherOverview() {
     const { selectedClass, openTeachersModal } = useOutletContext();
@@ -45,15 +45,16 @@ export default function TeacherOverview() {
     const [videoTest, setVideoTest] = useState(null);
 
     // Cập nhật ngay tại chỗ để giáo viên thấy nhãn đổi mà không phải tải lại trang.
-    const handleVideoSaved = (testId, videos) => {
+    const handleVideoSaved = (testId, videos, nextLegacyUrl) => {
         const list = Array.isArray(videos) ? videos : [];
+        const legacyPatch = nextLegacyUrl !== undefined ? { videoExplanationUrl: nextLegacyUrl } : {};
         const patch = (t) => (t && t.id === testId
-            ? { ...t, videoCount: list.length, ...(list.length === 0 ? { videoExplanationUrl: '' } : {}) }
+            ? { ...t, videoCount: list.length, ...legacyPatch }
             : t);
         setTests(prev => prev.map(patch));
         setSelectedTest(prev => patch(prev));
         setReviewData(prev => (prev
-            ? { ...prev, videos: list, ...(list.length === 0 ? { videoExplanationUrl: '' } : {}) }
+            ? { ...prev, videos: list, ...legacyPatch }
             : prev));
     };
 
@@ -68,15 +69,22 @@ export default function TeacherOverview() {
         setTestPage(1);
     }
 
-    // Gắn link video riêng cho từng câu hỏi (chỉ học sinh thấy khi xem lại đúng câu đó)
+    // Gắn link hoặc tải file video riêng cho từng câu hỏi (chỉ học sinh thấy khi xem lại đúng câu đó)
     const [qVideoInput, setQVideoInput] = useState('');
+    const [qVideoMode, setQVideoMode] = useState('link');
+    const [qVideoFile, setQVideoFile] = useState(null);
+    const [qVideoProgress, setQVideoProgress] = useState('');
     const [qVideoEditing, setQVideoEditing] = useState(false);
     const [qVideoSaving, setQVideoSaving] = useState(false);
     const [qVideoError, setQVideoError] = useState('');
+    const qVideoFileInputRef = useRef(null);
 
     // biome-ignore lint/correctness/useExhaustiveDependencies: reset video input when switching question or submission
     useEffect(() => {
         setQVideoInput('');
+        setQVideoMode('link');
+        setQVideoFile(null);
+        setQVideoProgress('');
         setQVideoEditing(false);
         setQVideoError('');
     }, [currentReviewIndex, reviewData?.submissionId]);
@@ -96,12 +104,55 @@ export default function TeacherOverview() {
                 };
             });
             setQVideoInput('');
+            setQVideoFile(null);
             setQVideoEditing(false);
         } catch (err) {
             console.error('Lỗi lưu video câu hỏi:', err);
             setQVideoError(err.response?.data?.message || 'Không lưu được link video. Kiểm tra kết nối rồi thử lại.');
         } finally {
             setQVideoSaving(false);
+        }
+    };
+
+    // Tải file video chữa riêng cho một câu hỏi lên lưu trữ đám mây.
+    const uploadQuestionVideo = async (questionId, file) => {
+        if (!file) {
+            setQVideoError('Hãy chọn file video trước khi tải lên.');
+            return;
+        }
+        setQVideoSaving(true);
+        setQVideoError('');
+        setQVideoProgress('Đang tải video lên lưu trữ đám mây (0%)...');
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await api.post(`/questions/${questionId}/video-file`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 10 * 60 * 1000,
+                onUploadProgress: (evt) => {
+                    if (evt.total > 0) {
+                        const pct = Math.min(99, Math.round((evt.loaded / evt.total) * 100));
+                        setQVideoProgress(`Đang tải video lên lưu trữ đám mây (${pct}%)...`);
+                    }
+                }
+            });
+            const saved = res.data?.videoExplanationUrl || '';
+            setReviewData(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    questions: prev.questions.map(q => (q.id === questionId ? { ...q, videoExplanationUrl: saved } : q))
+                };
+            });
+            setQVideoInput('');
+            setQVideoFile(null);
+            setQVideoEditing(false);
+        } catch (err) {
+            console.error('Lỗi tải file video câu hỏi:', err);
+            setQVideoError(err.response?.data?.message || 'Không tải được file video. Kiểm tra kết nối rồi thử lại.');
+        } finally {
+            setQVideoSaving(false);
+            setQVideoProgress('');
         }
     };
 
@@ -191,12 +242,14 @@ export default function TeacherOverview() {
         };
     }, [selectedClass, testPage]);
 
+    const selectedTestId = selectedTest?.id;
+
     useEffect(() => {
-        if (!selectedTest) return;
+        if (!selectedTestId) return;
 
         setSubmissionError('');
         const controller = new AbortController();
-        api.get(`/tests/${selectedTest.id}/submissions`, {
+        api.get(`/tests/${selectedTestId}/submissions`, {
             params: { page: submissionPage, pageSize: SUBMISSION_PAGE_SIZE },
             signal: controller.signal
         }).then(res => {
@@ -213,7 +266,7 @@ export default function TeacherOverview() {
         return () => {
             controller.abort();
         };
-    }, [selectedTest, submissionPage]);
+    }, [selectedTestId, submissionPage]);
 
     // Deep-link: tự chọn đúng đề khi bấm thông báo.
     useEffect(() => {
@@ -230,7 +283,13 @@ export default function TeacherOverview() {
         setIsLoadingDetail(true);
         api.get(`/tests/${testIdParam}`)
             .then(res => {
-                setSelectedTest({ id: res.data.id, title: res.data.title, duration: res.data.duration });
+                setSelectedTest({
+                    id: res.data.id,
+                    title: res.data.title,
+                    duration: res.data.duration,
+                    videoExplanationUrl: res.data.videoExplanationUrl || '',
+                    videoCount: Array.isArray(res.data.videos) ? res.data.videos.length : 0
+                });
                 setSubmissionPage(1);
                 setPendingDeepLink({ studentId: studentIdParam, questionId: questionIdParam });
             })
@@ -702,39 +761,88 @@ export default function TeacherOverview() {
                                             )}
 
                                             {qVideoEditing ? (
-                                                <div className="mt-3 space-y-2">
-                                                    <input
-                                                        type="text"
-                                                        value={qVideoInput}
-                                                        onChange={(e) => setQVideoInput(e.target.value)}
-                                                        placeholder="Dán link video (YouTube công khai / không công khai, Google Drive, Vimeo, Loom...)"
-                                                        className="w-full px-3 py-2 bg-white rounded-xl border border-pink-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                                                    />
+                                                <div className="mt-3 space-y-2.5">
+                                                    <div className="grid grid-cols-2 gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setQVideoMode('link'); setQVideoError(''); }}
+                                                            className={`py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer ${qVideoMode === 'link' ? 'bg-pink-500 text-white' : 'bg-white border border-pink-200 text-slate-600 hover:bg-pink-50'}`}
+                                                        >
+                                                            Dán link
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setQVideoMode('upload'); setQVideoError(''); }}
+                                                            className={`py-1.5 rounded-xl text-[11px] font-bold transition cursor-pointer ${qVideoMode === 'upload' ? 'bg-pink-500 text-white' : 'bg-white border border-pink-200 text-slate-600 hover:bg-pink-50'}`}
+                                                        >
+                                                            Tải file lên
+                                                        </button>
+                                                    </div>
+
+                                                    {qVideoMode === 'link' ? (
+                                                        <input
+                                                            type="text"
+                                                            value={qVideoInput}
+                                                            onChange={(e) => setQVideoInput(e.target.value)}
+                                                            placeholder="Dán link video (YouTube công khai / không công khai, Google Drive, Vimeo, Loom...)"
+                                                            className="w-full px-3 py-2 bg-white rounded-xl border border-pink-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                                        />
+                                                    ) : (
+                                                        <div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => qVideoFileInputRef.current?.click()}
+                                                                className="w-full px-3 py-2.5 rounded-xl border-2 border-dashed border-pink-200 bg-white hover:bg-pink-50 text-xs font-bold text-slate-700 text-center cursor-pointer transition"
+                                                            >
+                                                                {qVideoFile ? `${qVideoFile.name} (${(qVideoFile.size / (1024 * 1024)).toFixed(1)} MB)` : 'Chọn file video (.mp4, .mov, .webm...)'}
+                                                            </button>
+                                                            <input
+                                                                ref={qVideoFileInputRef}
+                                                                type="file"
+                                                                accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg,.mp4,.webm,.mov,.m4v,.ogv"
+                                                                className="hidden"
+                                                                onChange={(e) => {
+                                                                    setQVideoFile(e.target.files?.[0] || null);
+                                                                    setQVideoError('');
+                                                                    e.target.value = '';
+                                                                }}
+                                                            />
+                                                            {qVideoProgress && (
+                                                                <p className="mt-1.5 text-[11px] font-bold text-pink-600">{qVideoProgress}</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+
                                                     <div className="flex gap-2">
                                                         <button
                                                             type="button"
-                                                            onClick={() => { setQVideoEditing(false); setQVideoError(''); }}
-                                                            className="flex-1 py-2 rounded-xl bg-white border border-pink-200 text-[11px] font-bold text-slate-600 hover:bg-pink-50 cursor-pointer"
+                                                            onClick={() => { setQVideoEditing(false); setQVideoError(''); setQVideoFile(null); setQVideoProgress(''); }}
+                                                            disabled={qVideoSaving}
+                                                            className="flex-1 py-2 rounded-xl bg-white border border-pink-200 text-[11px] font-bold text-slate-600 hover:bg-pink-50 cursor-pointer disabled:opacity-50"
                                                         >
                                                             Hủy
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            onClick={() => saveQuestionVideo(currentQ.id, qVideoInput)}
-                                                            disabled={qVideoSaving || !qVideoInput.trim()}
+                                                            onClick={() => (
+                                                                qVideoMode === 'link'
+                                                                    ? saveQuestionVideo(currentQ.id, qVideoInput)
+                                                                    : uploadQuestionVideo(currentQ.id, qVideoFile)
+                                                            )}
+                                                            disabled={qVideoSaving || (qVideoMode === 'link' ? !qVideoInput.trim() : !qVideoFile)}
                                                             className="flex-[2] py-2 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-[11px] font-black disabled:opacity-50 cursor-pointer"
                                                         >
-                                                            {qVideoSaving ? 'Đang lưu...' : 'Lưu video cho câu này'}
+                                                            {qVideoSaving ? 'Đang lưu...' : (qVideoMode === 'link' ? 'Lưu video cho câu này' : 'Tải lên & gắn cho câu này')}
                                                         </button>
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <button
                                                     type="button"
-                                                    onClick={() => { setQVideoEditing(true); setQVideoInput(currentQ.videoExplanationUrl || ''); }}
+                                                    onClick={() => { setQVideoEditing(true); setQVideoMode('link'); setQVideoFile(null); setQVideoInput(currentQ.videoExplanationUrl || ''); }}
                                                     className="mt-3 w-full py-2 rounded-xl bg-white border border-pink-200 text-[11px] font-bold text-pink-700 hover:bg-pink-100 transition cursor-pointer"
                                                 >
-                                                    {currentQ.videoExplanationUrl ? 'Đổi link video câu này' : '+ Gắn link video cho câu này'}
+                                                    {currentQ.videoExplanationUrl ? 'Đổi link / file video câu này' : '+ Gắn video cho câu này'}
                                                 </button>
                                             )}
 
@@ -864,8 +972,8 @@ export default function TeacherOverview() {
                 test={videoTest}
                 isOpen={Boolean(videoTest)}
                 onClose={() => setVideoTest(null)}
-                onSaved={(videos) => {
-                    if (videoTest) handleVideoSaved(videoTest.id, videos);
+                onSaved={(videos, nextLegacyUrl) => {
+                    if (videoTest) handleVideoSaved(videoTest.id, videos, nextLegacyUrl);
                 }}
             />
         </div>

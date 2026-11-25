@@ -47,15 +47,21 @@ export default function VideoPlayer({ url, title = 'Video chữa bài', classNam
         fetch(rawUrl, { method: 'HEAD', signal: controller.signal })
             .then((res) => {
                 if (!active) return;
-                if (res.status === 404 || res.status === 410) {
+                if (
+                    res.status === 404 ||
+                    res.status === 410 ||
+                    (res.status === 400 && rawUrl.includes('/storage/v1/object/'))
+                ) {
                     setFileErrorKind('missing');
-                } else {
+                } else if (res.ok) {
                     setFileErrorKind('codec');
+                } else {
+                    setFileErrorKind(rawUrl.includes('/uploads/') ? 'missing' : 'network');
                 }
             })
             .catch((err) => {
                 if (!active || err?.name === 'AbortError') return;
-                setFileErrorKind(rawUrl.includes('/uploads/') ? 'missing' : 'codec');
+                setFileErrorKind(rawUrl.includes('/uploads/') ? 'missing' : 'network');
             });
 
         return () => {
@@ -107,9 +113,17 @@ export default function VideoPlayer({ url, title = 'Video chữa bài', classNam
                             File vẫn còn trên hệ thống (thường gặp với file .mov quay từ iPhone/iPad khi mở trên Chrome Windows). Bấm nút bên dưới để mở hoặc tải về xem.
                         </p>
                     </VideoNotice>
+                ) : fileErrorKind === 'network' ? (
+                    <VideoNotice rawUrl={rawUrl} openLabel="Mở video trong tab mới">
+                        <p className="text-xs font-black text-amber-800">Không tải được video trực tiếp trên khung này</p>
+                        <p className="text-[11px] text-amber-700 leading-relaxed max-w-md">
+                            Kết nối tới máy chủ chứa video bị gián đoạn hoặc bị chặn nhúng trực tiếp. Bấm nút bên dưới để mở video ở tab mới.
+                        </p>
+                    </VideoNotice>
                 ) : (
                     <div className="relative aspect-video w-full rounded-3xl overflow-hidden shadow-xl bg-black border-2 border-pink-200">
                         <video
+                            key={source.src}
                             src={source.src}
                             controls
                             controlsList="nodownload"
@@ -126,6 +140,7 @@ export default function VideoPlayer({ url, title = 'Video chữa bài', classNam
             ) : (
                 <div className="relative aspect-video w-full rounded-3xl overflow-hidden shadow-xl bg-black border-2 border-pink-200">
                     <iframe
+                        key={source.src}
                         src={source.src}
                         title={title}
                         className="w-full h-full"

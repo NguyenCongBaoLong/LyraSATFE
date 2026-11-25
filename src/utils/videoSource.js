@@ -1,18 +1,33 @@
 import { API_ORIGIN } from '../api';
 
 const UNSAFE_SCHEME_RE = /^(?:javascript|data|vbscript|file):/i;
+const ANY_SCHEME_RE = /^[A-Za-z][A-Za-z0-9+.-]*:/;
 const DIRECT_VIDEO_EXT_RE = /\.(mp4|m4v|webm|mov|ogv)$/i;
+const YT_ID_RE = /^[A-Za-z0-9_-]{11}$/;
+const YT_LIST_RE = /^[A-Za-z0-9_-]{10,}$/;
 
-function parseStartSeconds(urlObj) {
-    const raw = urlObj.searchParams.get('t') || urlObj.searchParams.get('start') || '';
+function parseTimeToken(raw) {
     if (!raw) return 0;
-    if (/^\d+$/.test(raw)) return Number.parseInt(raw, 10);
+    const cleaned = String(raw).trim();
+    if (/^\d+$/.test(cleaned)) return Number.parseInt(cleaned, 10);
 
-    const match = raw.match(/(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/i);
+    const match = cleaned.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
     if (!match || (!match[1] && !match[2] && !match[3])) return 0;
     return (Number.parseInt(match[1] || '0', 10) * 3600) +
         (Number.parseInt(match[2] || '0', 10) * 60) +
         Number.parseInt(match[3] || '0', 10);
+}
+
+function parseStartSeconds(urlObj) {
+    const queryRaw = urlObj.searchParams.get('t') || urlObj.searchParams.get('start') || '';
+    const fromQuery = parseTimeToken(queryRaw);
+    if (fromQuery > 0) return fromQuery;
+
+    const hash = (urlObj.hash || '').replace(/^#/, '');
+    if (!hash) return 0;
+    const hashParams = new URLSearchParams(hash);
+    const hashRaw = hashParams.get('t') || hashParams.get('start') || '';
+    return parseTimeToken(hashRaw);
 }
 
 function normalizeUrl(rawUrl) {
@@ -20,11 +35,74 @@ function normalizeUrl(rawUrl) {
     const trimmed = String(rawUrl).trim();
     if (!trimmed) return '';
     if (UNSAFE_SCHEME_RE.test(trimmed)) return '';
+    if (trimmed.startsWith('//')) return `https:${trimmed}`;
     if (trimmed.startsWith('/')) return `${API_ORIGIN}${trimmed}`;
-    if (!trimmed.includes('://') && trimmed.includes('.') && !/\s/.test(trimmed)) {
+    if (!ANY_SCHEME_RE.test(trimmed) && trimmed.includes('.') && !/\s/.test(trimmed)) {
         return `https://${trimmed}`;
     }
     return trimmed;
+}
+
+function isYouTubeHost(host) {
+    return host === 'youtu.be' ||
+        host.endsWith('.youtu.be') ||
+        host === 'youtube.com' ||
+        host.endsWith('.youtube.com') ||
+        host === 'youtube-nocookie.com' ||
+        host.endsWith('.youtube-nocookie.com');
+}
+
+function extractYouTubeEmbed(parsedUrl, depth = 0) {
+    if (depth > 2) return '';
+
+    const host = parsedUrl.hostname.toLowerCase();
+    const pathname = parsedUrl.pathname || '';
+
+    // Unwrap /attribution_link?u=...
+    if (pathname === '/attribution_link') {
+        const innerRaw = parsedUrl.searchParams.get('u');
+        if (innerRaw) {
+            try {
+                const decoded = decodeURIComponent(innerRaw);
+                const innerUrl = new URL(decoded.startsWith('/') ? `https://www.youtube.com${decoded}` : decoded);
+                if (isYouTubeHost(innerUrl.hostname.toLowerCase())) {
+                    return extractYouTubeEmbed(innerUrl, depth + 1);
+                }
+            } catch {
+                // Ignore malformed attribution URL
+            }
+        }
+    }
+
+    let videoId = '';
+    if (host === 'youtu.be' || host.endsWith('.youtu.be')) {
+        const seg = pathname.replace(/^\/+/, '').split('/')[0] || '';
+        if (YT_ID_RE.test(seg)) videoId = seg;
+    } else if (host === 'studio.youtube.com') {
+        const studioMatch = pathname.match(/^\/video\/([A-Za-z0-9_-]{11})(?:\/|$)/i);
+        if (studioMatch?.[1]) videoId = studioMatch[1];
+    } else {
+        const pathMatch = pathname.match(/^\/(?:embed|shorts|live|v|e)\/([A-Za-z0-9_-]{11})(?:\/|$)/i);
+        const queryV = parsedUrl.searchParams.get('v') || '';
+        if (pathMatch?.[1]) {
+            videoId = pathMatch[1];
+        } else if (YT_ID_RE.test(queryV)) {
+            videoId = queryV;
+        }
+    }
+
+    if (videoId) {
+        const start = parseStartSeconds(parsedUrl);
+        const suffix = start > 0 ? `?start=${start}` : '';
+        return `https://www.youtube.com/embed/${videoId}${suffix}`;
+    }
+
+    const listId = parsedUrl.searchParams.get('list') || '';
+    if ((pathname === '/playlist' || pathname === '/embed/videoseries') && YT_LIST_RE.test(listId)) {
+        return `https://www.youtube.com/embed/videoseries?list=${encodeURIComponent(listId)}`;
+    }
+
+    return '';
 }
 
 /**
@@ -33,8 +111,8 @@ function normalizeUrl(rawUrl) {
  * - File video trực tiếp (.mp4/.mov/.webm hoặc lưu trên server/Supabase): thẻ <video>.
  * - Google Drive file (/file/d/..., /file/u/0/d/..., open?id=..., uc?id=...): iframe /preview.
  * - Google Docs/Slides/Sheets/Drive folder: link mở tab mới (Google chặn nhúng iframe).
- * - YouTube (watch, youtu.be, shorts, live, embed, youtube-nocookie, công khai & không công khai): iframe embed.
- * - Vimeo (kể cả link không công khai có hash) & Loom: iframe embed.
+ * - YouTube (watch, youtu.be, shorts, live, embed, studio, playlist, attribution_link, công khai & không công khai): iframe embed.
+ * - Vimeo (kể cả link không công khai có hash, /manage/videos/, /showcase/) & Loom: iframe embed.
  * - Link https hợp lệ khác: iframe + nút mở tab mới.
  *
  * Trả về { kind: 'youtube' | 'drive' | 'vimeo' | 'loom' | 'file' | 'external' | 'iframe', src, rawUrl, ext? } hoặc null.
@@ -77,7 +155,10 @@ export function resolveVideoSource(rawUrl) {
         host === 'docs.google.com' ||
         host === 'slides.google.com' ||
         host === 'sheets.google.com' ||
-        (host === 'drive.google.com' && pathname.startsWith('/drive/'))
+        (host === 'drive.google.com' &&
+            (/^\/drive(?:\/|$)/i.test(pathname) ||
+                /^\/folders(?:\/|$)/i.test(pathname) ||
+                /^\/u\/\d+\/folders(?:\/|$)/i.test(pathname)))
     ) {
         return { kind: 'external', src: absolute, rawUrl: absolute };
     }
@@ -88,38 +169,40 @@ export function resolveVideoSource(rawUrl) {
         const queryId = parsedUrl.searchParams.get('id');
         const fileId = pathId || (queryId && /^[\w-]{10,}$/.test(queryId) ? queryId : '');
         if (fileId) {
+            const resourceKey = parsedUrl.searchParams.get('resourcekey');
+            const suffix = resourceKey ? `?resourcekey=${encodeURIComponent(resourceKey)}` : '';
             return {
                 kind: 'drive',
-                src: `https://drive.google.com/file/d/${fileId}/preview`,
+                src: `https://drive.google.com/file/d/${fileId}/preview${suffix}`,
                 rawUrl: absolute
             };
         }
+        return { kind: 'external', src: absolute, rawUrl: absolute };
     }
 
-    // 4. YouTube (watch, youtu.be, shorts, live, embed, v, m.youtube.com, music.youtube.com, youtube-nocookie.com)
-    if (host === 'youtu.be' || host.endsWith('.youtu.be') || host === 'youtube.com' || host.endsWith('.youtube.com') || host === 'youtube-nocookie.com' || host.endsWith('.youtube-nocookie.com')) {
-        const idMatch = absolute.match(
-            /(?:youtube(?:-nocookie)?\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?|shorts|live)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/i
-        );
-        if (idMatch?.[1]) {
-            const start = parseStartSeconds(parsedUrl);
-            const suffix = start > 0 ? `?start=${start}` : '';
+    // 4. YouTube (watch, youtu.be, shorts, live, embed, v, studio, playlist, attribution_link)
+    if (isYouTubeHost(host)) {
+        const embedSrc = extractYouTubeEmbed(parsedUrl);
+        if (embedSrc) {
             return {
                 kind: 'youtube',
-                src: `https://www.youtube.com/embed/${idMatch[1]}${suffix}`,
+                src: embedSrc,
                 rawUrl: absolute
             };
         }
-        return { kind: 'youtube', src: absolute, rawUrl: absolute };
+        // Trang kênh hoặc trang chủ YouTube không cho phép nhúng iframe -> mở tab mới
+        return { kind: 'external', src: absolute, rawUrl: absolute };
     }
 
-    // 5. Vimeo (public: vimeo.com/<id>, unlisted hash: vimeo.com/<id>/<hash> hoặc player.vimeo.com/video/<id>?h=...)
+    // 5. Vimeo (public, unlisted hash, manage/videos, album/showcase, player.vimeo.com)
     if (host === 'vimeo.com' || host === 'www.vimeo.com' || host === 'player.vimeo.com') {
         const playerMatch = pathname.match(/^\/video\/(\d+)/i);
+        const manageMatch = pathname.match(/^\/manage\/videos\/(\d+)(?:\/([a-f0-9]+))?/i);
+        const albumMatch = pathname.match(/^\/(?:album|showcase)\/\d+\/video\/(\d+)/i);
         const stdMatch = pathname.match(/^\/(?:channels\/[^/]+\/|groups\/[^/]+\/videos\/)?(\d+)(?:\/([a-f0-9]+))?/i);
-        const videoId = playerMatch?.[1] || stdMatch?.[1];
+        const videoId = playerMatch?.[1] || manageMatch?.[1] || albumMatch?.[1] || stdMatch?.[1];
         if (videoId) {
-            const hash = stdMatch?.[2] || parsedUrl.searchParams.get('h') || '';
+            const hash = manageMatch?.[2] || stdMatch?.[2] || parsedUrl.searchParams.get('h') || '';
             const query = hash ? `?h=${encodeURIComponent(hash)}` : '';
             return {
                 kind: 'vimeo',
@@ -127,11 +210,15 @@ export function resolveVideoSource(rawUrl) {
                 rawUrl: absolute
             };
         }
+        return { kind: 'external', src: absolute, rawUrl: absolute };
     }
 
-    // 6. Loom (loom.com/share/<id> hoặc loom.com/embed/<id>)
+    // 6. Loom (loom.com/share/<id> hoặc loom.com/embed/<id>; thư mục/spaces -> mở tab mới)
     if (host === 'loom.com' || host.endsWith('.loom.com')) {
-        const loomMatch = pathname.match(/^\/(?:share|embed)\/([A-Za-z0-9-]+)/i);
+        if (/^\/(?:share\/folder|spaces)(?:\/|$)/i.test(pathname)) {
+            return { kind: 'external', src: absolute, rawUrl: absolute };
+        }
+        const loomMatch = pathname.match(/^\/(?:share|embed)\/([A-Za-z0-9-]{8,})(?:\/|$)/i);
         if (loomMatch?.[1]) {
             return {
                 kind: 'loom',
