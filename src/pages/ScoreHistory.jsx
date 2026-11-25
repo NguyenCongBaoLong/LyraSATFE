@@ -383,7 +383,7 @@ export default function ScoreHistory() {
                                                 <div className="flex items-center gap-1.5 mb-2.5">
                                                     <span className="text-base">📹</span>
                                                     <span className="text-xs font-black text-pink-900">
-                                                        Video giải thích riêng câu này (YouTube)
+                                                        Video giải thích riêng câu này
                                                     </span>
                                                 </div>
                                                 <VideoPlayer

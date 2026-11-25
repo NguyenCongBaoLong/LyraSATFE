@@ -47,10 +47,14 @@ export default function TeacherOverview() {
     // Cập nhật ngay tại chỗ để giáo viên thấy nhãn đổi mà không phải tải lại trang.
     const handleVideoSaved = (testId, videos) => {
         const list = Array.isArray(videos) ? videos : [];
-        const patch = (t) => (t && t.id === testId ? { ...t, videoCount: list.length } : t);
+        const patch = (t) => (t && t.id === testId
+            ? { ...t, videoCount: list.length, ...(list.length === 0 ? { videoExplanationUrl: '' } : {}) }
+            : t);
         setTests(prev => prev.map(patch));
         setSelectedTest(prev => patch(prev));
-        setReviewData(prev => (prev ? { ...prev, videos: list } : prev));
+        setReviewData(prev => (prev
+            ? { ...prev, videos: list, ...(list.length === 0 ? { videoExplanationUrl: '' } : {}) }
+            : prev));
     };
 
     // Deep-link từ thông báo (giáo viên)
@@ -700,10 +704,10 @@ export default function TeacherOverview() {
                                             {qVideoEditing ? (
                                                 <div className="mt-3 space-y-2">
                                                     <input
-                                                        type="url"
+                                                        type="text"
                                                         value={qVideoInput}
                                                         onChange={(e) => setQVideoInput(e.target.value)}
-                                                        placeholder="Dán link YouTube hoặc link file video trên Google Drive"
+                                                        placeholder="Dán link video (YouTube công khai / không công khai, Google Drive, Vimeo, Loom...)"
                                                         className="w-full px-3 py-2 bg-white rounded-xl border border-pink-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
                                                     />
                                                     <div className="flex gap-2">

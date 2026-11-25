@@ -11,6 +11,7 @@ const MAX_VIDEO_MB = 150;
  */
 export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
     const [videos, setVideos] = useState([]);
+    const [legacyUrl, setLegacyUrl] = useState(test?.videoExplanationUrl || '');
     const [isLoading, setIsLoading] = useState(false);
     const [mode, setMode] = useState('link');
     const [link, setLink] = useState('');
@@ -49,15 +50,16 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
         setError('');
         setProgressLabel('');
         setVideos([]);
+        setLegacyUrl(test?.videoExplanationUrl || '');
         loadVideos();
-    }, [isOpen, testId, loadVideos]);
+    }, [isOpen, test?.videoExplanationUrl, loadVideos]);
 
     if (!isOpen || !test) return null;
 
     const pickFile = (f) => {
         if (!f) return;
         if (f.size > MAX_VIDEO_MB * 1024 * 1024) {
-            setError(`File vượt quá ${MAX_VIDEO_MB}MB. Hãy nén video hoặc dùng cách dán link YouTube.`);
+            setError(`File vượt quá ${MAX_VIDEO_MB}MB. Hãy nén video hoặc đăng lên YouTube / Google Drive rồi dán link.`);
             setFile(null);
             return;
         }
@@ -73,7 +75,7 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
             if (mode === 'link') {
                 const url = link.trim();
                 if (!url) {
-                    setError('Hãy dán link video (YouTube hoặc Google Drive).');
+                    setError('Hãy dán link video (YouTube, Google Drive, Vimeo, Loom...).');
                     setIsSaving(false);
                     return;
                 }
@@ -88,7 +90,7 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                 const formData = new FormData();
                 formData.append('file', file);
                 if (title.trim()) formData.append('title', title.trim());
-                setProgressLabel('Đang tải video lên, đừng đóng cửa sổ này...');
+                setProgressLabel('Đang tải video lên lưu trữ đám mây, đừng đóng cửa sổ này...');
                 const res = await api.post(`/testvideos/test/${test.id}/file`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                     timeout: 10 * 60 * 1000
@@ -130,7 +132,23 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
         }
     };
 
-    const hasAnyVideo = videos.length > 0 || Boolean(test.videoExplanationUrl);
+    const removeLegacyVideo = async () => {
+        if (!window.confirm('Gỡ link/file video cũ khỏi đề này?')) return;
+        setBusyId('legacy');
+        setError('');
+        try {
+            await api.put(`/tests/${test.id}/video`, { videoExplanationUrl: '' });
+            setLegacyUrl('');
+            onSaved?.([]);
+        } catch (err) {
+            console.error('Lỗi gỡ video cũ:', err);
+            setError(err.response?.data?.message || 'Không gỡ được video cũ. Thử lại sau.');
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    const hasLegacyVideo = videos.length === 0 && Boolean(legacyUrl);
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm p-0 sm:p-4">
@@ -142,7 +160,7 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                             {test.title}
                         </p>
                         <p className="text-[10px] font-bold text-pink-600 mt-1">
-                            {isLoading ? 'Đang tải...' : `Đã gắn ${videos.length} video`}
+                            {isLoading ? 'Đang tải...' : `Đã gắn ${videos.length > 0 ? videos.length : (hasLegacyVideo ? 1 : 0)} video`}
                         </p>
                     </div>
                     <button
@@ -161,9 +179,25 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 py-2">
                             <Loader2 className="w-4 h-4 animate-spin" /> Đang tải danh sách video...
                         </div>
+                    ) : videos.length === 0 && hasLegacyVideo ? (
+                        <div className="flex items-center justify-between gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-3 py-2">
+                            <div className="min-w-0">
+                                <p className="text-[11px] font-bold text-amber-900">Video cũ (link đơn)</p>
+                                <p className="text-[10px] text-amber-700 truncate">{legacyUrl}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={removeLegacyVideo}
+                                disabled={busyId === 'legacy'}
+                                className="px-2.5 py-1.5 rounded-lg bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 text-[10px] font-bold transition cursor-pointer disabled:opacity-50 shrink-0"
+                                title="Gỡ video cũ này"
+                            >
+                                {busyId === 'legacy' ? 'Đang gỡ...' : 'Gỡ video cũ'}
+                            </button>
+                        </div>
                     ) : videos.length === 0 ? (
                         <p className="text-[11px] text-slate-400 italic py-1">
-                            {hasAnyVideo ? 'Video cũ đang dùng link đơn, hãy thêm video mới bên dưới.' : 'Đề này chưa có video nào.'}
+                            Đề này chưa có video nào.
                         </p>
                     ) : (
                         <div className="space-y-2">
@@ -212,10 +246,11 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
+                        <label htmlFor="video-modal-title" className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
                             Tên video (không bắt buộc)
                         </label>
                         <input
+                            id="video-modal-title"
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
@@ -226,27 +261,28 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
 
                     {mode === 'link' ? (
                         <div>
-                            <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
-                                Link YouTube hoặc Google Drive (file video)
+                            <label htmlFor="video-modal-link" className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
+                                Link video (YouTube, Google Drive, Vimeo, Loom...)
                             </label>
                             <input
-                                type="url"
+                                id="video-modal-link"
+                                type="text"
                                 value={link}
                                 onChange={(e) => setLink(e.target.value)}
-                                placeholder="https://www.youtube.com/watch?v=..."
+                                placeholder="Dán link YouTube (công khai / không công khai), Google Drive, Vimeo..."
                                 className="w-full px-4 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
                             />
                             <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-                                Cách bền nhất: đăng video lên YouTube ở chế độ <strong>Không công khai</strong> rồi dán link.
-                                Không dùng link Google Docs/Slides/Drive folder — những loại đó không phát được.
+                                Hỗ trợ mọi link video: YouTube (công khai, không công khai, Shorts), Google Drive (file video), Vimeo, Loom hoặc đường dẫn video khác.
                             </p>
                         </div>
                     ) : (
                         <div>
-                            <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
+                            <label htmlFor="video-modal-file" className="block text-[11px] font-bold uppercase text-slate-400 mb-1">
                                 File video (mp4, webm, mov — tối đa {MAX_VIDEO_MB}MB)
                             </label>
-                            <div
+                            <button
+                                type="button"
                                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                                 onDragLeave={() => setIsDragging(false)}
                                 onDrop={(e) => {
@@ -255,7 +291,7 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                                     pickFile(e.dataTransfer.files?.[0]);
                                 }}
                                 onClick={() => fileInputRef.current?.click()}
-                                className={`rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition ${isDragging ? 'border-pink-400 bg-pink-50' : 'border-pink-200 bg-pink-50/40 hover:bg-pink-50'}`}
+                                className={`w-full rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition ${isDragging ? 'border-pink-400 bg-pink-50' : 'border-pink-200 bg-pink-50/40 hover:bg-pink-50'}`}
                             >
                                 <Upload className="w-6 h-6 mx-auto text-pink-500 mb-2" />
                                 <p className="text-xs font-bold text-slate-700">
@@ -266,17 +302,17 @@ export default function TestVideoModal({ test, isOpen, onClose, onSaved }) {
                                         {(file.size / (1024 * 1024)).toFixed(1)} MB
                                     </p>
                                 )}
-                            </div>
+                            </button>
                             <input
+                                id="video-modal-file"
                                 ref={fileInputRef}
                                 type="file"
                                 accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v"
                                 className="hidden"
                                 onChange={(e) => pickFile(e.target.files?.[0])}
                             />
-                            <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mt-2 leading-relaxed">
-                                Lưu ý: file tải trực tiếp nằm trên ổ đĩa server và sẽ mất khi server khởi động lại.
-                                Muốn giữ lâu, hãy dùng link YouTube/Drive.
+                            <p className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 mt-2 leading-relaxed">
+                                File video tải lên được lưu lâu dài trên lưu trữ đám mây (không bị mất khi cập nhật hệ thống). Nên dùng <strong>.mp4</strong> để xem mượt trên mọi thiết bị; file lớn hơn 50MB nên đăng YouTube / Google Drive rồi dán link.
                             </p>
                         </div>
                     )}

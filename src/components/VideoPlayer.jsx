@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { resolveVideoSource } from '../utils/videoSource';
 
@@ -12,7 +12,7 @@ function VideoNotice({ rawUrl, children, openLabel = 'Mở link trong tab mới'
                     href={rawUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 text-[11px] font-black text-amber-900 underline"
+                    className="mt-1 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-900 text-white text-[11px] font-black hover:bg-amber-800 transition"
                 >
                     <ExternalLink className="w-3.5 h-3.5" />
                     {openLabel}
@@ -24,21 +24,45 @@ function VideoNotice({ rawUrl, children, openLabel = 'Mở link trong tab mới'
 
 /**
  * Khung phát một video chữa bài.
- * Nhận link YouTube, link Google Drive (file) và file video tải lên server.
- *
- * Hai trường hợp hỏng thường gặp được xử lý để người xem không thấy "khung đen":
- * - Link Google Docs/Slides/Drive folder: Google chặn nhúng -> báo rõ + nút mở tab mới.
- * - File tải lên server bị xóa (ổ đĩa Render tạm thời) -> trình duyệt báo lỗi tải video -> báo rõ.
+ * Hỗ trợ YouTube (công khai & không công khai), Google Drive, Vimeo, Loom,
+ * file video trên lưu trữ đám mây và các link video hợp lệ khác.
  */
 export default function VideoPlayer({ url, title = 'Video chữa bài', className = '', showOpenLink = true }) {
-    const [fileFailed, setFileFailed] = useState(false);
+    const [fileErrorKind, setFileErrorKind] = useState(null);
     const [prevUrl, setPrevUrl] = useState(url);
     if (url !== prevUrl) {
         setPrevUrl(url);
-        setFileFailed(false);
+        setFileErrorKind(null);
     }
+
     const source = resolveVideoSource(url);
-    const rawUrl = source?.kind === 'file' ? source.src : (url || '');
+    const rawUrl = source?.rawUrl || source?.src || (url || '');
+
+    useEffect(() => {
+        if (fileErrorKind !== 'checking' || !rawUrl) return undefined;
+
+        const controller = new AbortController();
+        let active = true;
+
+        fetch(rawUrl, { method: 'HEAD', signal: controller.signal })
+            .then((res) => {
+                if (!active) return;
+                if (res.status === 404 || res.status === 410) {
+                    setFileErrorKind('missing');
+                } else {
+                    setFileErrorKind('codec');
+                }
+            })
+            .catch((err) => {
+                if (!active || err?.name === 'AbortError') return;
+                setFileErrorKind(rawUrl.includes('/uploads/') ? 'missing' : 'codec');
+            });
+
+        return () => {
+            active = false;
+            controller.abort();
+        };
+    }, [fileErrorKind, rawUrl]);
 
     if (!source) {
         return (
@@ -48,23 +72,39 @@ export default function VideoPlayer({ url, title = 'Video chữa bài', classNam
         );
     }
 
+    const handleFileError = () => {
+        setFileErrorKind((prev) => (prev ? prev : 'checking'));
+    };
+
+    const showNotice = source.kind === 'external' || Boolean(fileErrorKind);
+
     return (
         <div className={className}>
-            {source.kind === 'blocked' ? (
+            {source.kind === 'external' ? (
                 <VideoNotice rawUrl={rawUrl}>
-                    <p className="text-xs font-black text-amber-800">Video này đang dùng link không phát được trong khung</p>
-                    <p className="text-[11px] text-amber-700 leading-relaxed">
-                        Link Google Docs/Slides/Drive folder bị Google chặn nhúng. Giáo viên cần thay bằng
-                        link YouTube (chế độ Không công khai) hoặc link file video trên Drive.
+                    <p className="text-xs font-black text-amber-800">Link này cần mở trực tiếp ở tab mới</p>
+                    <p className="text-[11px] text-amber-700 leading-relaxed max-w-md">
+                        Google Docs/Slides hoặc thư mục Drive không hỗ trợ phát lồng trong khung. Bấm nút bên dưới để mở ngay ở tab mới.
                     </p>
                 </VideoNotice>
             ) : source.kind === 'file' ? (
-                fileFailed ? (
+                fileErrorKind === 'checking' ? (
+                    <VideoNotice rawUrl={rawUrl} openLabel="Mở video trong tab mới">
+                        <p className="text-xs font-black text-amber-800">Đang kiểm tra file video...</p>
+                    </VideoNotice>
+                ) : fileErrorKind === 'missing' ? (
                     <VideoNotice rawUrl={rawUrl} openLabel="Thử mở trực tiếp">
-                        <p className="text-xs font-black text-amber-800">File video này không còn trên server</p>
-                        <p className="text-[11px] text-amber-700 leading-relaxed">
-                            File tải trực tiếp lên server chỉ tồn tại tạm thời. Nhờ giáo viên gắn lại video
-                            bằng link YouTube (Không công khai) hoặc file trên Google Drive để xem được lâu dài.
+                        <p className="text-xs font-black text-amber-800">File video cũ này không còn trên server</p>
+                        <p className="text-[11px] text-amber-700 leading-relaxed max-w-md">
+                            File từng tải lên ổ đĩa tạm của server trước đây đã bị xóa khi cập nhật hệ thống.
+                            Nhờ giáo viên tải lại video lên hoặc dán link YouTube / Google Drive (công khai hay không công khai đều được).
+                        </p>
+                    </VideoNotice>
+                ) : fileErrorKind === 'codec' ? (
+                    <VideoNotice rawUrl={rawUrl} openLabel="Mở / Tải video trực tiếp">
+                        <p className="text-xs font-black text-amber-800">Trình duyệt trên máy này không phát trực tiếp được định dạng video này</p>
+                        <p className="text-[11px] text-amber-700 leading-relaxed max-w-md">
+                            File vẫn còn trên hệ thống (thường gặp với file .mov quay từ iPhone/iPad khi mở trên Chrome Windows). Bấm nút bên dưới để mở hoặc tải về xem.
                         </p>
                     </VideoNotice>
                 ) : (
@@ -76,7 +116,7 @@ export default function VideoPlayer({ url, title = 'Video chữa bài', classNam
                             playsInline
                             preload="metadata"
                             className="w-full h-full"
-                            onError={() => setFileFailed(true)}
+                            onError={handleFileError}
                         >
                             <track kind="captions" />
                             Trình duyệt của bạn không phát được video này.
@@ -90,13 +130,13 @@ export default function VideoPlayer({ url, title = 'Video chữa bài', classNam
                         title={title}
                         className="w-full h-full"
                         referrerPolicy="strict-origin-when-cross-origin"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                         allowFullScreen
                     />
                 </div>
             )}
 
-            {showOpenLink && source.kind !== 'blocked' && !fileFailed && rawUrl && (
+            {showOpenLink && !showNotice && rawUrl && (
                 <a
                     href={rawUrl}
                     target="_blank"

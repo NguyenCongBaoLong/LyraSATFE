@@ -216,18 +216,18 @@ export default function TeacherUploadTest() {
 
                 <div>
                     <label htmlFor="upload-test-video" className="block text-xs font-bold uppercase text-slate-400 mb-1">
-                        Link Video YouTube chữa đề & giải thích chi tiết (ở cuối bài test)
+                        Link Video chữa đề & giải thích chi tiết (ở cuối bài test)
                     </label>
                     <input 
                         id="upload-test-video"
-                        type="url"
-                        placeholder="Ví dụ: https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+                        type="text"
+                        placeholder="Dán link YouTube (công khai / không công khai), Google Drive, Vimeo, Loom..."
                         value={videoExplanationUrl}
                         onChange={(e) => setVideoExplanationUrl(e.target.value)}
                         className="w-full px-4 py-3 bg-pink-50/50 rounded-2xl border border-pink-100 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-pink-500"
                     />
                     <p className="text-[11px] text-slate-400 mt-1">
-                        Có thể bỏ trống và gắn video sau: vào danh sách <strong>Bài test đã giao</strong> bên dưới, bấm nút <strong>🎬 Video chữa bài</strong>.
+                        Có thể bỏ trống và gắn hoặc tải file video sau: vào danh sách <strong>Bài test đã giao</strong> bên dưới, bấm nút <strong>🎬 Video chữa bài</strong>.
                         Học sinh sẽ xem được video này ở cuối bài sau khi hoàn thành hoặc nộp bài test.
                     </p>
                 </div>
